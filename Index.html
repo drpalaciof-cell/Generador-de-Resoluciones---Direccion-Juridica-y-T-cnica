@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATP - Sistema de Generación de Resoluciones</title>
+
+<!-- Librerías para manejar .docx -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.50.0/docxtemplater.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+:root{
+  --atp-azul:#1d4a7a;
+  --atp-azul-osc:#0f2f54;
+  --atp-azul-cl:#2c6bb3;
+  --atp-verde:#5fb651;
+  --atp-verde-osc:#3e8a31;
+  --bg:#f0f4f8;
+  --panel:#ffffff;
+  --ink:#1c2733;
+  --muted:#6b7785;
+  --line:#dde3ec;
+  --warn:#a86f1d;
+  --ok:#2e6b3a;
+  --danger:#a83232;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14px;min-height:100vh}
+
+/* ENCABEZADO ATP */
+header.atp-header{background:#fff;border-bottom:3px solid var(--atp-azul);padding:0;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+.atp-topbar{background:linear-gradient(90deg,var(--atp-azul-osc),var(--atp-azul));color:#fff;padding:6px 24px;display:flex;justify-content:space-between;font-size:12px}
+.atp-mainbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;gap:24px}
+.atp-logo{display:flex;align-items:center;gap:14px}
+.atp-logo svg{width:54px;height:54px}
+.atp-logo .titulo{font-weight:700;color:var(--atp-azul);font-size:16px;line-height:1.2}
+.atp-logo .subtitulo{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.atp-djt-logo{display:flex;align-items:center;gap:10px;padding:6px 14px;background:#f8fafd;border-radius:6px;border:1px solid var(--line)}
+.atp-djt-logo svg{width:36px;height:36px}
+.atp-djt-logo .label{line-height:1.1;font-size:10px;color:var(--atp-azul);font-weight:700;letter-spacing:.5px}
+.atp-djt-logo .label .verde{color:var(--atp-verde-osc)}
+.atp-navbar{background:var(--atp-azul);color:#fff;padding:0 24px;display:flex;align-items:center;gap:0}
+.atp-navbar::before{content:'';display:inline-block;width:30px;height:24px;background:linear-gradient(135deg,var(--atp-verde) 50%,transparent 50%);margin-right:8px}
+.atp-navbar a{color:#fff;padding:11px 18px;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer}
+.atp-navbar a.active,.atp-navbar a:hover{background:var(--atp-azul-osc)}
+
+/* CONTENEDOR */
+.contenedor{max-width:1400px;margin:24px auto;padding:0 24px}
+
+/* PASOS / WIZARD */
+.wizard{display:flex;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.wizard-step{flex:1;padding:14px 18px;text-align:center;border-right:1px solid var(--line);position:relative;font-size:12px;cursor:pointer;color:var(--muted);transition:all .2s}
+.wizard-step:last-child{border-right:none}
+.wizard-step.active{background:var(--atp-azul);color:#fff}
+.wizard-step.done{background:#e8f3e1;color:var(--atp-verde-osc)}
+.wizard-step .num{display:inline-block;width:24px;height:24px;border-radius:50%;background:#fff;color:var(--atp-azul);font-weight:700;line-height:24px;margin-right:6px;font-size:12px;border:1px solid var(--line)}
+.wizard-step.active .num{background:#fff;color:var(--atp-azul)}
+.wizard-step.done .num{background:var(--atp-verde);color:#fff;border-color:var(--atp-verde)}
+
+/* PANELES Y CARDS */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:22px 24px;margin-bottom:16px;box-shadow:0 2px 4px rgba(0,0,0,.03)}
+.panel h2{font-size:18px;color:var(--atp-azul);margin-bottom:6px;font-weight:700}
+.panel h3{font-size:15px;color:var(--atp-azul-osc);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-weight:600}
+.panel .subtitle{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+.tab{display:none}
+.tab.active{display:block}
+
+/* FORMULARIOS */
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.grid-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.col-span-2{grid-column:span 2}
+.col-span-3{grid-column:span 3}
+label{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:#3a4856}
+label.req::after{content:" *";color:var(--danger)}
+input[type=text],input[type=number],input[type=date],input[type=email],select,textarea{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:5px;font-family:inherit;font-size:13px;background:#fcfdff;color:var(--ink);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--atp-azul);background:#fff;box-shadow:0 0 0 3px rgba(29,74,122,.1)}
+textarea{resize:vertical;min-height:65px;font-size:12px}
+small.hint{color:var(--muted);font-size:11px;display:block;margin-top:4px}
+
+/* BOTONES */
+.btn{background:var(--atp-azul);color:#fff;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:var(--atp-azul-osc);transform:translateY(-1px)}
+.btn:disabled{background:#aab4c0;cursor:not-allowed;transform:none}
+.btn.verde{background:var(--atp-verde-osc)}
+.btn.verde:hover{background:#2c6322}
+.btn.sec{background:#fff;color:var(--atp-azul);border:1.5px solid var(--atp-azul)}
+.btn.sec:hover{background:#f0f4f8}
+.btn.danger{background:var(--danger)}
+.btn.danger:hover{background:#7d2424}
+.btn.sm{padding:6px 12px;font-size:12px}
+.btn.lg{padding:14px 28px;font-size:14px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:#f0f4f8}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.toolbar .grow{flex-grow:1}
+
+/* TABLA */
+.tabla-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+table thead th{background:var(--atp-azul);color:#fff;text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;position:sticky;top:0;z-index:1}
+table tbody td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table tbody tr.eximir{background:#fff8e1}
+table tbody tr.eximir td{border-left:3px solid var(--warn)}
+table tbody tr.eximir td:first-child{border-left:3px solid var(--warn)}
+table tbody tr.sancionar{background:#fff}
+table input,table select,table textarea{padding:5px 6px;font-size:12px;background:transparent;border:1px solid transparent;border-radius:3px}
+table input:hover,table select:hover,table textarea:hover{border-color:var(--line);background:#fff}
+table input:focus,table select:focus,table textarea:focus{border-color:var(--atp-azul);background:#fff;box-shadow:none}
+
+/* CHIPS Y ESTADOS */
+.chip{display:inline-block;padding:3px 9px;border-radius:11px;font-size:11px;font-weight:600;letter-spacing:.3px}
+.chip.verde{background:#e0f0d8;color:var(--atp-verde-osc)}
+.chip.amarillo{background:#fff3d8;color:#a86f1d}
+.chip.azul{background:#dde7f5;color:var(--atp-azul)}
+.chip.rojo{background:#f8dcdc;color:var(--danger)}
+
+/* ALERTAS */
+.alerta{padding:12px 16px;border-radius:5px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.alerta-info{background:#e8f0fa;border-left:4px solid var(--atp-azul);color:#173a5e}
+.alerta-warn{background:#fff8e1;border-left:4px solid var(--warn);color:#7a4d10}
+.alerta-ok{background:#e8f3e1;border-left:4px solid var(--atp-verde);color:#2c5b22}
+.alerta-error{background:#fbe5e5;border-left:4px solid var(--danger);color:#6b1e1e}
+
+/* TIPO DE INFRACCIÓN - cards */
+.cards-infraccion{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
+.card-infr{background:#fff;border:2px solid var(--line);border-radius:8px;padding:18px;cursor:pointer;transition:all .2s;position:relative}
+.card-infr.activo:hover{border-color:var(--atp-azul);transform:translateY(-2px);box-shadow:0 6px 14px rgba(29,74,122,.12)}
+.card-infr.inactivo{opacity:.55;cursor:not-allowed;background:#f8f9fb}
+.card-infr.seleccionado{border-color:var(--atp-azul);background:#f0f6fe}
+.card-infr h4{font-size:14px;color:var(--atp-azul-osc);margin-bottom:6px}
+.card-infr .desc{font-size:12px;color:var(--muted)}
+.card-infr .badge-prox{position:absolute;top:8px;right:8px;background:var(--warn);color:#fff;font-size:10px;padding:3px 8px;border-radius:9px;font-weight:600;letter-spacing:.3px}
+.card-infr .icono{font-size:24px;margin-bottom:8px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,30,50,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:10px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 16px 60px rgba(0,0,0,.3)}
+.modal-header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;color:var(--atp-azul)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+
+/* DICTAMINADORES */
+.lista-dict{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.lista-dict .dict-item{background:#fcfdff;border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.dict-item .info strong{color:var(--atp-azul)}
+.dict-item .info small{color:var(--muted);display:block;font-size:11px;margin-top:2px}
+.dict-item .acciones{display:flex;gap:6px}
+.dict-item .iniciales-pill{display:inline-block;background:var(--atp-azul);color:#fff;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:700;margin-left:8px;letter-spacing:.5px}
+
+/* PLANTILLAS */
+.plantilla-card{background:#fcfdff;border:1.5px dashed var(--line);border-radius:6px;padding:14px;display:flex;align-items:center;gap:14px}
+.plantilla-card.cargada{border-style:solid;border-color:var(--atp-verde);background:#f0f8eb}
+.plantilla-card .icono{font-size:30px;width:40px;text-align:center}
+.plantilla-card .info{flex:1}
+.plantilla-card .info strong{font-size:13px}
+.plantilla-card .info small{color:var(--muted);font-size:11px;display:block}
+
+/* PREVIEW */
+.preview-box{background:#fff;border:1px solid var(--line);border-radius:6px;padding:24px 32px;margin-top:14px;font-family:'Cambria','Times New Roman',serif;font-size:13px;line-height:1.6;max-height:600px;overflow-y:auto;white-space:pre-wrap;color:#1a2532}
+
+/* RESUMEN */
+.resumen-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+.resumen-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px}
+.resumen-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.resumen-card .valor{font-size:16px;font-weight:700;color:var(--atp-azul)}
+
+/* FOOTER */
+footer{margin-top:30px;padding:20px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+
+/* HOME */
+.home-hero{background:linear-gradient(135deg,var(--atp-azul) 0%,var(--atp-azul-osc) 100%);color:#fff;border-radius:10px;padding:40px 32px;margin-bottom:20px;position:relative;overflow:hidden}
+.home-hero::before{content:'';position:absolute;right:-30px;top:-30px;width:200px;height:200px;background:var(--atp-verde);opacity:.15;border-radius:50%}
+.home-hero::after{content:'';position:absolute;right:50px;bottom:-50px;width:120px;height:120px;background:#fff;opacity:.08;border-radius:50%}
+.home-hero h1{font-size:24px;margin-bottom:8px;position:relative}
+.home-hero p{font-size:15px;opacity:.9;max-width:600px;margin-bottom:20px;position:relative}
+.home-hero .btn{position:relative;background:#fff;color:var(--atp-azul);padding:14px 32px;font-size:15px}
+.home-hero .btn:hover{background:#f0f6fe;color:var(--atp-azul-osc)}
+.home-hero .btn.verde-cta{background:var(--atp-verde);color:#fff}
+.home-hero .btn.verde-cta:hover{background:var(--atp-verde-osc);color:#fff}
+
+.home-acciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.home-accion{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;cursor:pointer;transition:all .15s;text-align:center}
+.home-accion:hover{border-color:var(--atp-azul);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.home-accion .icono{font-size:32px;margin-bottom:8px}
+.home-accion h4{font-size:14px;color:var(--atp-azul-osc);margin-bottom:4px}
+.home-accion p{font-size:12px;color:var(--muted)}
+
+@media(max-width:768px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .col-span-2,.col-span-3{grid-column:span 1}
+  .atp-mainbar{flex-wrap:wrap}
+  .wizard{flex-wrap:wrap}
+  .wizard-step{flex:1 1 50%}
+}
+@media print{
+  header,.wizard,.toolbar,nav,.btn{display:none!important}
+  .panel{box-shadow:none;border:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ ENCABEZADO ATP ============ -->
+<header class="atp-header">
+  <div class="atp-topbar">
+    <span>Valor vigente UT $ <span id="ut-vigente-display">1.000</span></span>
+    <span id="fecha-display">Formosa, 29/04/2026</span>
+  </div>
+  <div class="atp-mainbar">
+    <div class="atp-logo">
+      <!-- Logo ATP simple -->
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#1d4a7a" stroke-width="3"/>
+        <path d="M32 4 A28 28 0 0 1 60 32" fill="none" stroke="#5fb651" stroke-width="3"/>
+        <text x="32" y="38" text-anchor="middle" font-size="14" font-weight="700" fill="#1d4a7a" font-family="Arial">ATP</text>
+        <text x="32" y="50" text-anchor="middle" font-size="6" fill="#5fb651" font-family="Arial">FORMOSA</text>
+      </svg>
+      <div>
+        <div class="titulo">Administración Tributaria</div>
+        <div class="subtitulo">Provincia de Formosa</div>
+      </div>
+    </div>
+    <div class="atp-djt-logo">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#1d4a7a"/>
+        <path d="M32 4 A28 28 0 0 1 60 32 A28 28 0 0 1 32 60" fill="#5fb651"/>
+        <circle cx="32" cy="32" r="22" fill="#1d4a7a"/>
+        <path d="M22 26 L32 22 L42 26 L42 28 L22 28 Z" fill="#fff"/>
+        <rect x="20" y="40" width="24" height="2" fill="#fff"/>
+        <line x1="26" y1="28" x2="26" y2="40" stroke="#fff" stroke-width="1.5"/>
+        <line x1="38" y1="28" x2="38" y2="40" stroke="#fff" stroke-width="1.5"/>
+        <line x1="32" y1="22" x2="32" y2="42" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+      <div class="label">DIRECCIÓN DE<br><span style="font-size:13px">JURÍDICA Y TÉCNICA</span><br><span class="verde">— ATP</span></div>
+    </div>
+  </div>
+  <nav class="atp-navbar">
+    <a id="nav-home" onclick="irA('home')" class="active">INICIO</a>
+    <a id="nav-nuevo" onclick="irA('wizard')">NUEVA RESOLUCIÓN</a>
+    <a id="nav-dictaminadores" onclick="irA('dictaminadores')">DICTAMINADORES</a>
+    <a id="nav-plantillas" onclick="irA('plantillas')">PLANTILLAS</a>
+    <a id="nav-modelos" onclick="irA('modelos')">FUNDAMENTOS</a>
+    <a id="nav-config" onclick="irA('config')">CONFIGURACIÓN</a>
+  </nav>
+</header>
+
+<div class="contenedor">
+
+<!-- ===================== HOME ===================== -->
+<div class="tab active" id="tab-home">
+  <div class="home-hero">
+    <h1>Sistema de Generación de Resoluciones</h1>
+    <p>Generación automatizada de Resoluciones, Dictámenes, Cédulas y Anexos por infracciones al art. 42° del Código Fiscal — Ley N° 1.589.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn lg verde-cta" onclick="iniciarNuevoExpediente()">+ GENERAR NUEVA RESOLUCIÓN</button>
+      <button class="btn lg sec" onclick="irA('config')" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">⚙ CONFIGURACIÓN</button>
+    </div>
+  </div>
+
+  <div class="home-acciones">
+    <div class="home-accion" onclick="irA('dictaminadores')">
+      <div class="icono">👥</div>
+      <h4>Dictaminadores</h4>
+      <p>Gestionar firmas y sellos escalera</p>
+    </div>
+    <div class="home-accion" onclick="irA('plantillas')">
+      <div class="icono">📄</div>
+      <h4>Plantillas .docx</h4>
+      <p>Cargar modelos oficiales</p>
+    </div>
+    <div class="home-accion" onclick="irA('modelos')">
+      <div class="icono">⚖️</div>
+      <h4>Fundamentos</h4>
+      <p>Editar modelos de descargo</p>
+    </div>
+    <div class="home-accion" onclick="exportarBackup()">
+      <div class="icono">💾</div>
+      <h4>Backup</h4>
+      <p>Descargar copia de seguridad</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== WIZARD ===================== -->
+<div class="tab" id="tab-wizard">
+
+  <div class="wizard">
+    <div class="wizard-step active" id="ws-1" onclick="irPaso(1)"><span class="num">1</span> Tipo Infracción</div>
+    <div class="wizard-step" id="ws-2" onclick="irPaso(2)"><span class="num">2</span> Datos Expediente</div>
+    <div class="wizard-step" id="ws-3" onclick="irPaso(3)"><span class="num">3</span> Remitentes</div>
+    <div class="wizard-step" id="ws-4" onclick="irPaso(4)"><span class="num">4</span> Descargos</div>
+    <div class="wizard-step" id="ws-5" onclick="irPaso(5)"><span class="num">5</span> Generar</div>
+  </div>
+
+  <!-- PASO 1: TIPO INFRACCION -->
+  <div class="paso" id="paso-1">
+    <div class="panel">
+      <h2>Paso 1: Selección de Tipo de Infracción</h2>
+      <p class="subtitle">Elegí el tipo de infracción a procesar. Solo PAQUETERÍA está activo en esta versión.</p>
+      <div class="cards-infraccion">
+        <div class="card-infr activo seleccionado" onclick="seleccionarTipo('paqueteria')">
+          <div class="icono">📦</div>
+          <h4>PAQUETERÍA</h4>
+          <p class="desc">Art. 42° inc. a) - RG 26/2020</p>
+        </div>
+        <div class="card-infr inactivo" title="Próximamente">
+          <span class="badge-prox">Próximamente</span>
+          <div class="icono">📋</div>
+          <h4>INC. D - FALTA DE INSCRIPCIÓN</h4>
+          <p class="desc">Art. 42° inc. d)</p>
+        </div>
+        <div class="card-infr inactivo">
+          <span class="badge-prox">Próximamente</span>
+          <div class="icono">⚖️</div>
+          <h4>INC. A y C</h4>
+          <p class="desc">Combinada</p>
+        </div>
+        <div class="card-infr inactivo">
+          <span class="badge-prox">Próximamente</span>
+          <div class="icono">🚛</div>
+          <h4>INC. C</h4>
+          <p class="desc">Transporte sin documentación</p>
+        </div>
+        <div class="card-infr inactivo">
+          <span class="badge-prox">Próximamente</span>
+          <div class="icono">🛑</div>
+          <h4>NO DETENCIÓN</h4>
+          <p class="desc">Evasión control caminero</p>
+        </div>
+        <div class="card-infr inactivo">
+          <span class="badge-prox">Próximamente</span>
+          <div class="icono">📝</div>
+          <h4>DEBER FORMAL</h4>
+          <p class="desc">Otros incumplimientos</p>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;justify-content:flex-end">
+        <button class="btn lg" onclick="irPaso(2)">Continuar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 2: DATOS EXPEDIENTE -->
+  <div class="paso" id="paso-2" style="display:none">
+    <div class="panel">
+      <h2>Paso 2: Datos del Expediente</h2>
+      <p class="subtitle">Cargá los datos del expediente y del acta de comprobación.</p>
+
+      <div class="alerta alerta-info">
+        <span style="font-size:18px">📌</span>
+        <div><strong>Carátula fija:</strong> "ACTA DE COMPROBACIÓN INFRACCIÓN AL ART. 42 INC. A CÓDIGO FISCAL LEY 1.589 – PAQUETERÍA"</div>
+      </div>
+
+      <h3>Identificación</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="req">N° Expediente</label>
+          <input type="text" data-field="exp_numero" placeholder="P-003521/24-ATPF">
+        </div>
+        <div>
+          <label class="req">Carátula (nombre principal)</label>
+          <input type="text" data-field="exp_caratula_principal" placeholder="DIXTER S.A.">
+          <small class="hint">Nombre que figura al final de la carátula</small>
+        </div>
+        <div>
+          <label>Tipo de mercadería</label>
+          <input type="text" data-field="exp_mercaderia" value="PAQUETERÍA">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Acta de Comprobación</h3>
+      <div class="grid grid-3">
+        <div><label class="req">Fojas Acta</label><input type="text" data-field="acta_fojas" placeholder="01/13"></div>
+        <div><label class="req">Fecha Acta</label><input type="text" data-field="acta_fecha" placeholder="10 de Junio de 2024"><small class="hint">"10 de Junio de 2024"</small></div>
+        <div><label class="req">Hora</label><input type="text" data-field="acta_hora" placeholder="06:00 hs."></div>
+        <div><label class="req">Puesto Control</label><input type="text" data-field="acta_puesto" value="Lucio V. Mansilla"></div>
+        <div><label>Ruta y Km</label><input type="text" data-field="acta_ruta" value="Ruta Nacional Nº 11, km. 1.103"></div>
+        <div><label>Provincia</label><input type="text" data-field="acta_provincia" value="Formosa"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Datos del Transporte</h3>
+      <div class="grid grid-3">
+        <div><label class="req">Empresa Transporte</label><input type="text" data-field="trans_empresa" placeholder="HIJOS DE ROBERTO CANCIO DEMONTE S.A."></div>
+        <div><label class="req">CUIT</label><input type="text" data-field="trans_cuit" placeholder="33-57808923-9"></div>
+        <div><label class="req">Domicilio Transp.</label><input type="text" data-field="trans_domicilio" placeholder="Ruta 12 Km. 1026, Corrientes"></div>
+        <div><label class="req">Camión</label><input type="text" data-field="trans_camion" placeholder="Scania R114GA"></div>
+        <div><label class="req">Dominio</label><input type="text" data-field="trans_dominio" placeholder="FMM387"></div>
+        <div><label>Dominio Acoplado</label><input type="text" data-field="trans_dominio_aco" placeholder="AA263TE"></div>
+        <div><label class="req">Chofer</label><input type="text" data-field="trans_chofer" placeholder="CARLOS FABIAN OJEDA"></div>
+        <div><label class="req">DNI Chofer</label><input type="text" data-field="trans_chofer_dni" placeholder="29.529.733"></div>
+        <div><label class="req">Origen</label><input type="text" data-field="trans_origen" placeholder="Provincia de Buenos Aires"></div>
+        <div class="col-span-3"><label class="req">Destino</label><input type="text" data-field="trans_destino" placeholder="Ciudad de Formosa, provincia homónima"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Sanción - Unidad Tributaria</h3>
+      <div class="grid grid-3">
+        <div><label class="req">Cantidad UT</label><input type="number" data-field="ut_cantidad" value="500" oninput="recalcMulta()"></div>
+        <div><label class="req">Valor UT a fecha del acta</label><input type="number" data-field="ut_valor" placeholder="600" oninput="recalcMulta()"></div>
+        <div><label>Multa total ($)</label><input type="text" data-field="ut_multa" readonly style="background:#f0f4f8;font-weight:700;color:var(--atp-azul)"></div>
+        <div class="col-span-2"><label>Multa en letras</label><input type="text" data-field="ut_multa_letras" placeholder="TRESCIENTOS MIL"><small class="hint">Ej: TRESCIENTOS MIL · QUINIENTOS MIL · UN MILLÓN</small></div>
+        <div><label>Valor UT en letras</label><input type="text" data-field="ut_valor_letras" placeholder="SEISCIENTOS"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:20px">
+      <button class="btn ghost" onclick="irPaso(1)">← Volver</button>
+      <button class="btn lg" onclick="irPaso(3)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 3: REMITENTES -->
+  <div class="paso" id="paso-3" style="display:none">
+    <div class="panel">
+      <h2>Paso 3: Carga de Remitentes</h2>
+      <p class="subtitle">Cargá uno por uno o importá una planilla Excel/CSV.</p>
+
+      <div class="toolbar">
+        <button class="btn" onclick="agregarRemitente()">+ Agregar manual</button>
+        <button class="btn sec" onclick="abrirImportarExcel()">📊 Importar desde Excel</button>
+        <div class="grow"></div>
+        <span id="contador-rem" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+
+      <div id="importar-panel" style="display:none;margin-bottom:14px" class="alerta alerta-info">
+        <div style="flex:1">
+          <strong>Importar desde Excel</strong><br>
+          <small>Pegá las filas copiadas desde Excel (Ctrl+C en Excel → Ctrl+V acá). Columnas en orden:<br>
+          A) Razón Social · B) CUIT · C) Domicilio · D) Tipo Remito · E) N° Remito · F) Fecha Remito</small>
+          <textarea id="importar-textarea" rows="5" style="margin-top:8px;font-family:monospace;font-size:12px" placeholder="DETODONET S.A.&#9;30-71699337-6&#9;CABA&#9;R&#9;00002-00014029&#9;05/06/2024"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="btn sm" onclick="procesarImportar()">Procesar</button>
+            <button class="btn sm ghost" onclick="document.getElementById('importar-panel').style.display='none'">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabla-wrap">
+        <table id="tabla-remitentes">
+          <thead>
+            <tr>
+              <th style="width:30px">#</th>
+              <th style="min-width:180px">Razón Social</th>
+              <th style="min-width:130px">CUIT</th>
+              <th style="min-width:200px">Domicilio</th>
+              <th style="min-width:80px">Remito Tipo</th>
+              <th style="min-width:130px">N° Remito</th>
+              <th style="min-width:110px">Fecha</th>
+              <th style="min-width:120px">Estado</th>
+              <th style="min-width:60px"></th>
+            </tr>
+          </thead>
+          <tbody id="rem-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:20px">
+      <button class="btn ghost" onclick="irPaso(2)">← Volver</button>
+      <button class="btn lg" onclick="irPaso(4)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 4: DESCARGOS -->
+  <div class="paso" id="paso-4" style="display:none">
+    <div class="panel">
+      <h2>Paso 4: Descargos y Fundamentos</h2>
+      <p class="subtitle">Para cada remitente que va a ser <strong>sancionado</strong>, asigná el tipo de descargo presentado y los datos de notificación. Los <strong>eximidos</strong> no requieren descargo pero igual aparecerán en la resolución.</p>
+
+      <div id="lista-descargos"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:20px">
+      <button class="btn ghost" onclick="irPaso(3)">← Volver</button>
+      <button class="btn lg" onclick="irPaso(5)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 5: GENERAR -->
+  <div class="paso" id="paso-5" style="display:none">
+    <div class="panel">
+      <h2>Paso 5: Dictaminador, Resumen y Generación</h2>
+
+      <div id="warns-faltantes"></div>
+
+      <h3>Dictaminador firmante</h3>
+      <div class="grid grid-2">
+        <div>
+          <label class="req">Seleccionar dictaminador</label>
+          <select id="dict-seleccion" onchange="onSeleccionarDict()">
+            <option value="">-- Elegir --</option>
+          </select>
+          <small class="hint">¿No está en la lista? <a onclick="irA('dictaminadores')" style="color:var(--atp-azul);cursor:pointer">Agregarlo</a></small>
+        </div>
+        <div>
+          <label>N° Dictamen</label>
+          <input type="text" id="dict-numero-display" readonly style="background:#f0f4f8;font-weight:700">
+          <small class="hint">Numeración automática. Configurable en <a onclick="irA('config')" style="color:var(--atp-azul);cursor:pointer">Configuración</a></small>
+        </div>
+        <div>
+          <label class="req">Fecha Dictamen</label>
+          <input type="text" data-field="dict_fecha" placeholder="24 de Abril de 2026">
+        </div>
+        <div>
+          <label>Director Jurídica y Técnica</label>
+          <input type="text" data-field="dict_director" value="JOSE JAVIER MOBILIO">
+        </div>
+      </div>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line)">
+
+      <h3>Resumen del expediente</h3>
+      <div class="resumen-grid" id="resumen-grid"></div>
+
+      <h3>Plantillas a utilizar</h3>
+      <div id="estado-plantillas"></div>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line)">
+
+      <h3>Generar documentos</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">
+        <button class="btn lg verde" onclick="generarTodo()">⚡ GENERAR TODOS LOS DOCUMENTOS</button>
+        <button class="btn sec" onclick="vistaPrevia('resolucion')">👁 Vista previa Resolución</button>
+        <button class="btn sec" onclick="vistaPrevia('dictamen')">👁 Vista previa Dictamen</button>
+        <button class="btn sec" onclick="vistaPrevia('anexo')">👁 Vista previa Anexo</button>
+        <button class="btn sec" onclick="vistaPrevia('cedulas')">👁 Vista previa Cédulas</button>
+      </div>
+
+      <div id="preview-area"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:20px">
+      <button class="btn ghost" onclick="irPaso(4)">← Volver</button>
+      <button class="btn ghost" onclick="if(confirm('¿Iniciar nuevo expediente? Los datos actuales no se perderán hasta que confirmes generar.')) iniciarNuevoExpediente()">🆕 Nuevo expediente</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== DICTAMINADORES ===================== -->
+<div class="tab" id="tab-dictaminadores">
+  <div class="panel">
+    <h2>Gestión de Dictaminadores</h2>
+    <p class="subtitle">Cargá los dictaminadores con sus iniciales para sello escalera. Las iniciales deben ser únicas.</p>
+
+    <h3>Agregar nuevo</h3>
+    <div class="grid grid-3">
+      <div><label class="req">Nombre completo</label><input type="text" id="nuevo-dict-nombre" placeholder="JUAN PEREZ"></div>
+      <div><label class="req">Iniciales (sello escalera)</label><input type="text" id="nuevo-dict-iniciales" placeholder="J.P." maxlength="10" style="text-transform:uppercase"></div>
+      <div><label>Cargo / Departamento</label><input type="text" id="nuevo-dict-cargo" placeholder="Departamento Procedimiento por Infracciones Formales"></div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn" onclick="agregarDictaminador()">+ Agregar dictaminador</button>
+    </div>
+
+    <h3 style="margin-top:24px">Dictaminadores cargados</h3>
+    <div class="lista-dict" id="lista-dictaminadores"></div>
+  </div>
+</div>
+
+<!-- ===================== PLANTILLAS ===================== -->
+<div class="tab" id="tab-plantillas">
+  <div class="panel">
+    <h2>Plantillas Word (.docx)</h2>
+    <p class="subtitle">Cargá las plantillas oficiales con variables. Si no hay plantilla cargada, el sistema generará un .docx desde cero usando los modelos en texto.</p>
+
+    <div class="alerta alerta-info">
+      <div>
+        <strong>📋 Variables disponibles para usar en tus plantillas:</strong><br>
+        <code style="font-size:11px;color:#1d4a7a;display:block;margin-top:6px;font-family:monospace">
+          {expediente} {caratula} {fecha_acta} {hora_acta} {fojas_acta} {puesto_control} {ruta} {provincia}<br>
+          {trans_empresa} {trans_cuit} {trans_domicilio} {trans_camion} {trans_dominio} {trans_dominio_aco}<br>
+          {trans_chofer} {trans_chofer_dni} {trans_origen} {trans_destino} {mercaderia}<br>
+          {ut_cantidad} {ut_valor} {ut_valor_letras} {ut_multa} {ut_multa_letras}<br>
+          {dict_numero} {dict_fecha} {dict_director} {dict_iniciales} {dict_nombre}<br>
+          {remitos_listado} {cedulas_listado} {descargos_presentados} {respuestas_descargos} {sin_descargo_listado}<br>
+          {anexo_filas} {res_articulos}<br>
+          <strong>Para cédulas individuales:</strong> {rs} {cuit} {domicilio} {res_numero}
+        </code>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="plantilla-card" id="pc-resolucion">
+        <div class="icono">📄</div>
+        <div class="info">
+          <strong>Plantilla Resolución</strong>
+          <small id="pc-res-nombre">Sin cargar (se generará desde cero)</small>
+        </div>
+        <div>
+          <input type="file" id="file-res" accept=".docx" style="display:none" onchange="cargarPlantilla('resolucion',event)">
+          <button class="btn sm sec" onclick="document.getElementById('file-res').click()">Cargar</button>
+          <button class="btn sm danger" onclick="borrarPlantilla('resolucion')">×</button>
+        </div>
+      </div>
+      <div class="plantilla-card" id="pc-dictamen">
+        <div class="icono">⚖️</div>
+        <div class="info">
+          <strong>Plantilla Dictamen</strong>
+          <small id="pc-dict-nombre">Sin cargar</small>
+        </div>
+        <div>
+          <input type="file" id="file-dict" accept=".docx" style="display:none" onchange="cargarPlantilla('dictamen',event)">
+          <button class="btn sm sec" onclick="document.getElementById('file-dict').click()">Cargar</button>
+          <button class="btn sm danger" onclick="borrarPlantilla('dictamen')">×</button>
+        </div>
+      </div>
+      <div class="plantilla-card" id="pc-cedula">
+        <div class="icono">✉️</div>
+        <div class="info">
+          <strong>Plantilla Cédula</strong>
+          <small id="pc-ced-nombre">Sin cargar</small>
+        </div>
+        <div>
+          <input type="file" id="file-ced" accept=".docx" style="display:none" onchange="cargarPlantilla('cedula',event)">
+          <button class="btn sm sec" onclick="document.getElementById('file-ced').click()">Cargar</button>
+          <button class="btn sm danger" onclick="borrarPlantilla('cedula')">×</button>
+        </div>
+      </div>
+      <div class="plantilla-card" id="pc-anexo">
+        <div class="icono">📋</div>
+        <div class="info">
+          <strong>Plantilla Anexo</strong>
+          <small id="pc-anx-nombre">Sin cargar</small>
+        </div>
+        <div>
+          <input type="file" id="file-anx" accept=".docx" style="display:none" onchange="cargarPlantilla('anexo',event)">
+          <button class="btn sm sec" onclick="document.getElementById('file-anx').click()">Cargar</button>
+          <button class="btn sm danger" onclick="borrarPlantilla('anexo')">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODELOS / FUNDAMENTOS ===================== -->
+<div class="tab" id="tab-modelos">
+  <div class="panel">
+    <h2>Fundamentos (modelos de respuesta a descargos)</h2>
+    <p class="subtitle">Editá los textos para los 8 tipos de descargos. Variables disponibles: <code>{{razon_social}}</code> · <code>{{cuit}}</code> · <code>{{fojas_descargo}}</code></p>
+    <div id="modelos-container"></div>
+    <div style="margin-top:14px">
+      <button class="btn ghost" onclick="resetModelos()">↻ Restaurar a originales</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONFIGURACION ===================== -->
+<div class="tab" id="tab-config">
+  <div class="panel">
+    <h2>Configuración</h2>
+    <h3>Numeración de Dictámenes</h3>
+    <div class="grid grid-3">
+      <div>
+        <label>Próximo N° de Dictamen</label>
+        <input type="number" id="cfg-prox-dict" oninput="guardarConfig()">
+        <small class="hint">Auto-incremento. Modificá solo si hay error.</small>
+      </div>
+      <div>
+        <label>Sufijo</label>
+        <input type="text" id="cfg-sufijo-dict" placeholder="/2026-DPIF" oninput="guardarConfig()">
+      </div>
+    </div>
+    <h3 style="margin-top:24px">Backup y restauración</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="exportarBackup()">💾 Descargar backup completo</button>
+      <input type="file" id="file-backup" accept=".json" style="display:none" onchange="importarBackup(event)">
+      <button class="btn sec" onclick="document.getElementById('file-backup').click()">📂 Importar backup</button>
+      <button class="btn danger" onclick="borrarTodo()">🗑 Borrar todos los datos</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<footer>
+  Sistema ATP Formosa · Generación de Resoluciones · v2.0 · <span id="footer-fecha"></span>
+</footer>
+
+<!-- =============== MODAL VISTA PREVIA =============== -->
+<div class="modal-overlay" id="modal-preview">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h3 id="modal-preview-titulo">Vista Previa</h3>
+      <button class="modal-close" onclick="document.getElementById('modal-preview').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="preview-box" id="modal-preview-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" onclick="document.getElementById('modal-preview').classList.remove('show')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================================================================================
+// ESTADO Y PERSISTENCIA
+// ====================================================================================
+const STORAGE_KEY = 'sistema_atp_v2';
+const TEMPLATES_DB = 'sistema_atp_templates_v2';
+
+let state = {
+  expediente: {},
+  remitentes: [],
+  modelos: null,
+  dictaminadores: [],
+  config: {
+    proxNumDict: 126,
+    sufijoDict: '/2026-DPIF',
+    utVigente: 1000
+  },
+  tipoInfraccion: 'paqueteria'
+};
+
+// Plantillas se guardan en IndexedDB porque son grandes (binario base64)
+let plantillas = {
+  resolucion: null,
+  dictamen: null,
+  cedula: null,
+  anexo: null
+};
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ console.error('Error guardando',e); }
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) state = JSON.parse(raw);
+  }catch(e){console.error(e)}
+  if(!state.expediente) state.expediente = {};
+  if(!state.remitentes) state.remitentes = [];
+  if(!state.modelos) state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+  if(!state.dictaminadores) state.dictaminadores = [];
+  if(!state.config) state.config = {proxNumDict:126,sufijoDict:'/2026-DPIF',utVigente:1000};
+}
+
+// ===== IndexedDB para plantillas =====
+function abrirDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(TEMPLATES_DB, 1);
+    req.onerror = ()=>reject(req.error);
+    req.onsuccess = ()=>resolve(req.result);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('plantillas')) db.createObjectStore('plantillas');
+    };
+  });
+}
+async function guardarPlantillaDB(tipo, base64, nombre){
+  const db = await abrirDB();
+  const tx = db.transaction('plantillas','readwrite');
+  tx.objectStore('plantillas').put({base64,nombre,tipo,fecha:new Date().toISOString()}, tipo);
+  return new Promise(r=>tx.oncomplete=()=>r());
+}
+async function cargarPlantillasDB(){
+  const db = await abrirDB();
+  const tx = db.transaction('plantillas','readonly');
+  const store = tx.objectStore('plantillas');
+  for(const tipo of ['resolucion','dictamen','cedula','anexo']){
+    await new Promise(r=>{
+      const req = store.get(tipo);
+      req.onsuccess = ()=>{
+        if(req.result) plantillas[tipo] = req.result;
+        r();
+      };
+      req.onerror = ()=>r();
+    });
+  }
+}
+async function borrarPlantillaDB(tipo){
+  const db = await abrirDB();
+  const tx = db.transaction('plantillas','readwrite');
+  tx.objectStore('plantillas').delete(tipo);
+  return new Promise(r=>tx.oncomplete=()=>r());
+}
+
+// ====================================================================================
+// MODELOS DE FUNDAMENTOS
+// ====================================================================================
+const MODELOS_DEFAULT = [
+  { id:'no_presento', nombre:'No presentó descargo', descripcion:'Endilgado debidamente notificado pero sin presentación.', para_resolucion:'', para_dictamen:'' },
+  { id:'m1_presento_factura_recien_descargo', nombre:'M1 - Presentó la factura recién en instancia del descargo', descripcion:'El infractor presenta la factura adjunta al escrito de descargo, alegando que ya estaba emitida.',
+    para_resolucion:'Que, los argumentos desarrollados por la firma {{razon_social}}, CUIT N° {{cuit}}, responsable de la emisión de la documentación con la cual ingresaron los bienes hacia la jurisdicción provincial, no logran desvirtuar las infracciones endilgadas a su respecto. En su descargo obrante a fs. {{fojas_descargo}}, el infractor considera que no ha incumplido los deberes a su cargo, presentando en dicha oportunidad la Factura que respaldaría la operación, sin embargo, la normativa fiscal no solo exige la emisión sino también la entrega al transportista para su exhibición en el Puesto de Control a los efectos de su debida registración y, en el caso bajo estudio, quedó acreditado que los bienes eran trasladados sin factura. En efecto, la firma remitente, como persona dedicada al comercio, está obligada a cumplir con una serie de deberes formales tributarios que rigen el ejercicio de su actividad y en este sentido, la reglamentación dispone que quién remite bienes y/o productos a la Provincia de Formosa, debe cumplir con la carga de entregar al transportista la Factura que respalde la operación de compraventa cuyo traslado encomienda, la cual debe ser emitida previamente al inicio del traslado y acompañar hasta su destino. (Artículo 27° de la Resolución General N° 1415/2003 a la cual esta Administración Tributaria se halla adherida por Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020 DGR);',
+    para_dictamen:'Los argumentos desarrollados por la firma {{razon_social}}, CUIT N° {{cuit}}, responsable de la emisión de la documentación con la cual ingresaron los bienes hacia la jurisdicción provincial, no logran desvirtuar las infracciones endilgadas a su respecto. En su descargo obrante a fs. {{fojas_descargo}}, el infractor considera que no ha incumplido los deberes a su cargo, presentando en dicha oportunidad la Factura que respaldaría la operación, sin embargo, la normativa fiscal no solo exige la emisión sino también la entrega al transportista para su exhibición en el Puesto de Control a los efectos de su debida registración y, en el caso bajo estudio, quedó acreditado que los bienes eran trasladados sin factura. En efecto, la firma remitente, como persona dedicada al comercio, está obligada a cumplir con una serie de deberes formales tributarios que rigen el ejercicio de su actividad y en este sentido, la reglamentación dispone que quién remite bienes y/o productos a la Provincia de Formosa, debe cumplir con la carga de entregar al transportista la Factura que respalde la operación de compraventa cuyo traslado encomienda, la cual debe ser emitida previamente al inicio del traslado y acompañar hasta su destino (Artículo 27° de la Resolución General N° 1415/2003 a la cual esta Administración Tributaria se halla adherida por Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020 DGR).' },
+  { id:'m2_remito_suficiente', nombre:'M2 - Considera que el remito es suficiente', descripcion:'Sostiene que el remito por sí solo respalda el traslado.',
+    para_resolucion:'Que, en cuanto a la defensa ensayada por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, basada en la supuesta suficiencia del remito como único respaldo documental del traslado, corresponde señalar que el remito no acredita por sí mismo la existencia de una operación de compraventa, sino únicamente el traslado físico de los bienes, resultando insuficiente para cumplir con las exigencias establecidas por la Resolución General N° 26/2020-DGR, la cual dispone expresamente que el ingreso de mercaderías a esta jurisdicción por operaciones de compraventa, permuta o dación en pago debe estar documentado con la factura o tique factura correspondiente, además del remito o guía, según corresponda;\n\nQue, en efecto, quien remite bienes y/o productos a la Provincia de Formosa, en su carácter de sujeto que ejerce una actividad comercial, se encuentra obligado al cumplimiento de los deberes formales tributarios, entre los cuales se encuentra la carga de entregar al transportista la factura que respalde la operación de compraventa, la cual debe ser emitida con anterioridad al inicio del traslado y acompañar la mercadería hasta su destino, conforme lo dispuesto por el artículo 27° de la Resolución General N° 1415/2003, a la cual esta Administración Tributaria se encuentra adherida mediante Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020-DGR;',
+    para_dictamen:'En cuanto a la defensa ensayada por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, basada en la supuesta suficiencia del remito como único respaldo documental del traslado, corresponde señalar que el remito no acredita por sí mismo la existencia de una operación de compraventa, sino únicamente el traslado físico de los bienes, resultando insuficiente para cumplir con las exigencias establecidas por la Resolución General N° 26/2020-DGR, la cual dispone expresamente que el ingreso de mercaderías a esta jurisdicción por operaciones de compraventa, permuta o dación en pago debe estar documentado con la factura o tique factura correspondiente, además del remito o guía, según corresponda.\n\nEn efecto, quien remite bienes y/o productos a la Provincia de Formosa, en su carácter de sujeto que ejerce una actividad comercial, se encuentra obligado al cumplimiento de los deberes formales tributarios, entre los cuales se encuentra la carga de entregar al transportista la factura que respalde la operación de compraventa, la cual debe ser emitida con anterioridad al inicio del traslado y acompañar la mercadería hasta su destino, conforme lo dispuesto por el artículo 27° de la Resolución General N° 1415/2003, a la cual esta Administración Tributaria se encuentra adherida mediante Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020-DGR.' },
+  { id:'m3_remito_R_comprobante_equivalente', nombre:'M3 - Sostiene que el remito tipo "R" es comprobante equivalente válido', descripcion:'Aduce que el remito tipo R alcanza como comprobante equivalente conforme la RG 1415/2003.',
+    para_resolucion:'Que, en cuanto al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que el presentante sostiene que la mercadería transportada se encontraba debidamente documentada mediante un remito tipo "R", al que atribuye carácter de comprobante equivalente válido conforme a la Resolución General N° 1415/2003 (ARCA – ex AFIP), entendiendo que ello resultaría suficiente para excluir la configuración de la infracción prevista en el artículo 42° del Código Fiscal;\n\nQue, sin embargo, tal planteo no resulta atendible, puesto que conforme surge del Acta de Comprobación labrada en autos, la mercadería era trasladada sin la correspondiente factura que respalde la operación comercial, habiéndose exhibido únicamente un remito tipo "R", circunstancia que se encuentra debidamente consignada en el instrumento, el cual goza de presunción de legitimidad y autenticidad;\n\nQue, en este sentido, si bien la normativa nacional (Resolución General N° 1415/2003-AFIP) admite la utilización de remitos como documentos que acompañan el traslado de bienes, ello no releva al sujeto obligado de emitir la factura correspondiente con anterioridad al inicio del traslado hacia la jurisdicción provincial, ni de asegurar su efectiva entrega al transportista para su exhibición en el puesto de control;\n\nQue, en particular, la Resolución General N° 26/2020-DGR, establece que la factura debe emitirse previamente al traslado y acompañar la mercadería hasta su destino, constituyendo un requisito esencial para respaldar la operación de compraventa;\n\nQue, por lo tanto, el remito no sustituye a la factura en cuanto comprobante fiscal de la operación, sino que cumple una función complementaria vinculada al traslado físico de los bienes, razón por la cual su sola exhibición no resulta suficiente para acreditar el debido cumplimiento de las obligaciones fiscales exigidas por la normativa vigente;',
+    para_dictamen:'En cuanto al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que el presentante sostiene que la mercadería transportada se encontraba debidamente documentada mediante un remito tipo "R", al que atribuye carácter de comprobante equivalente válido conforme a la Resolución General N° 1415/2003 (ARCA – ex AFIP), entendiendo que ello resultaría suficiente para excluir la configuración de la infracción prevista en el artículo 42° del Código Fiscal.\n\nSin embargo, tal planteo no resulta atendible, puesto que conforme surge del Acta de Comprobación labrada en autos, la mercadería era trasladada sin la correspondiente factura que respalde la operación comercial, habiéndose exhibido únicamente un remito tipo "R", circunstancia que se encuentra debidamente consignada en el instrumento, el cual goza de presunción de legitimidad y autenticidad.\n\nEn este sentido, si bien la normativa nacional (Resolución General N° 1415/2003-AFIP) admite la utilización de remitos como documentos que acompañan el traslado de bienes, ello no releva al sujeto obligado de emitir la factura correspondiente con anterioridad al inicio del traslado hacia la jurisdicción provincial, ni de asegurar su efectiva entrega al transportista para su exhibición en el puesto de control.\n\nEn particular, la Resolución General N° 26/2020-DGR, establece que la factura debe emitirse previamente al traslado y acompañar la mercadería hasta su destino, constituyendo un requisito esencial para respaldar la operación de compraventa.\n\nPor lo tanto, el remito no sustituye a la factura en cuanto comprobante fiscal de la operación, sino que cumple una función complementaria vinculada al traslado físico de los bienes, razón por la cual su sola exhibición no resulta suficiente para acreditar el debido cumplimiento de las obligaciones fiscales exigidas por la normativa vigente.' },
+  { id:'m4_transporte_a_cargo_comprador', nombre:'M4 - Transporte a cargo del comprador / tercero no dependiente', descripcion:'El remitente alega que el transporte estaba a cargo del comprador o de un tercero ajeno.',
+    para_resolucion:'Que, en relación a lo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, respecto a que el transporte de la mercadería se encontraba a cargo del comprador y era realizado por un tercero no dependiente de su representada, corresponde señalar que dicha circunstancia no exime ni atenúa la responsabilidad del remitente, toda vez que la normativa fiscal vigente no condiciona la obligación de documentar el traslado de mercaderías a la existencia de una relación de dependencia con el transportista, sino que impone al sujeto que remite los bienes la carga de emitir y entregar la factura que respalde la operación de compraventa, asegurando que la misma acompañe la mercadería durante todo el trayecto hasta su destino final;\n\nQue, en tal sentido, la Resolución General N° 26/2020-DGR establece de manera expresa que el ingreso de mercaderías a la Provincia de Formosa, de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá encontrarse documentado con la factura o tique factura, además del remito o guía que corresponda, todos ellos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 de AFIP y sus modificatorias, a la cual este Organismo se encuentra adherido por Resolución General N° 32/2019-DGR; obligación que resulta exigible con independencia de quién asuma el costo u organización del transporte, debiendo dicha documentación acompañar la mercadería y ser exhibida por el transportista al momento del control, resultando irrelevante que el traslado sea efectuado por un tercero ajeno a la estructura del remitente;',
+    para_dictamen:'En relación a lo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, respecto a que el transporte de la mercadería se encontraba a cargo del comprador y era realizado por un tercero no dependiente de su representada, corresponde señalar que dicha circunstancia no exime ni atenúa la responsabilidad del remitente, toda vez que la normativa fiscal vigente no condiciona la obligación de documentar el traslado de mercaderías a la existencia de una relación de dependencia con el transportista, sino que impone al sujeto que remite los bienes la carga de emitir y entregar la factura que respalde la operación de compraventa, asegurando que la misma acompañe la mercadería durante todo el trayecto hasta su destino final.\n\nEn tal sentido, la Resolución General N° 26/2020-DGR establece de manera expresa que el ingreso de mercaderías a la Provincia de Formosa, de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá encontrarse documentado con la factura o tique factura, además del remito o guía que corresponda, todos ellos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 de AFIP y sus modificatorias, a la cual este Organismo se encuentra adherido por Resolución General N° 32/2019-DGR; obligación que resulta exigible con independencia de quién asuma el costo u organización del transporte, debiendo dicha documentación acompañar la mercadería y ser exhibida por el transportista al momento del control, resultando irrelevante que el traslado sea efectuado por un tercero ajeno a la estructura del remitente.' },
+  { id:'m5_factura_entregada_al_transportista', nombre:'M5 - Sostiene que la factura fue entregada al transportista', descripcion:'Atribuye al transportista la responsabilidad por la falta de exhibición.',
+    para_resolucion:'Que, a este respecto, corresponde indicar que, en relación a lo manifestado por {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, en cuanto sostiene que la mercadería transportada contaba con facturación y documentación respaldatoria emitida con anterioridad al traslado, y que la eventual omisión en su exhibición sería atribuible al transportista, corresponde rechazar tales argumentos por resultar incompatibles con las constancias objetivas del procedimiento;\n\nQue, en efecto, conforme surge del Acta de Comprobación labrada en autos, la única documentación exhibida al momento del control por el conductor de la unidad fue el remito acompañado, no habiéndose presentado facturas ni otra documentación fiscal que respalde la totalidad de la mercadería transportada, en los términos exigidos por la normativa vigente;\n\nQue, asimismo, cabe destacar que el Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no registra la exhibición de las facturas que ahora se invocan en el descargo, ni manifestación alguna por parte del conductor en tal sentido, pese a habérsele otorgado la posibilidad de efectuar aclaraciones o agregar documentación al momento de la suscripción del Acta, conforme lo establece el artículo 45° del Código Fiscal;\n\nQue, en este sentido, el argumento relativo a que la mercadería habría sido facturada con anterioridad y que la responsabilidad recaería exclusivamente en el transportista, no resulta atendible, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías y asegurar la efectiva disponibilidad de dicha documentación al momento del control constituye un deber inherente a la operatoria comercial del contribuyente, cuya inobservancia configura la infracción prevista en el artículo 42° del Código Fiscal, con independencia de las relaciones contractuales entre las partes intervinientes;',
+    para_dictamen:'A este respecto, corresponde indicar que, en relación a lo manifestado por {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, en cuanto sostiene que la mercadería transportada contaba con facturación y documentación respaldatoria emitida con anterioridad al traslado, y que la eventual omisión en su exhibición sería atribuible al transportista, corresponde rechazar tales argumentos por resultar incompatibles con las constancias objetivas del procedimiento.\n\nEn efecto, conforme surge del Acta de Comprobación labrada en autos, la única documentación exhibida al momento del control por el conductor de la unidad fue el remito acompañado, no habiéndose presentado facturas ni otra documentación fiscal que respalde la totalidad de la mercadería transportada, en los términos exigidos por la normativa vigente.\n\nAsimismo, cabe destacar que el Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no registra la exhibición de las facturas que ahora se invocan en el descargo, ni manifestación alguna por parte del conductor en tal sentido, pese a habérsele otorgado la posibilidad de efectuar aclaraciones o agregar documentación al momento de la suscripción del Acta, conforme lo establece el artículo 45° del Código Fiscal.\n\nEn este sentido, el argumento relativo a que la mercadería habría sido facturada con anterioridad y que la responsabilidad recaería exclusivamente en el transportista, no resulta atendible, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías y asegurar la efectiva disponibilidad de dicha documentación al momento del control constituye un deber inherente a la operatoria comercial del contribuyente, cuya inobservancia configura la infracción prevista en el artículo 42° del Código Fiscal, con independencia de las relaciones contractuales entre las partes intervinientes.' },
+  { id:'m6_colision_normativa_federal_provincial', nombre:'M6 - Argumentan colisión normativa federal vs provincial', descripcion:'Sostiene que la RG 26/2020-DGR colisiona con la RG 1415/2003-AFIP.',
+    para_resolucion:'Que, en relación al descargo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, relativo a la supuesta colisión entre la normativa federal (Resolución General N° 1415/2003 – AFIP) y la normativa provincial (Resolución General N° 26/2020-DGR), corresponde señalar que el mismo carece de sustento jurídico, en tanto no se verifica incompatibilidad alguna sino una adecuada articulación normativa en el marco del sistema federal de potestades tributarias;\n\nQue, en efecto, conforme lo dispuesto por el artículo 7° del Código Fiscal – Ley N° 1589, esta Administración Tributaria se encuentra expresamente facultada para dictar normas generales obligatorias en cuanto a la forma, modo y condiciones en que deben cumplirse los deberes formales, pudiendo exigir la exhibición de documentación y comprobantes vinculados a hechos imponibles, así como también disponer que todo traslado o transporte de mercaderías que tenga origen o destino en la jurisdicción provincial se encuentre debidamente amparado por la documentación exigida por la normativa tributaria;\n\nQue, en este sentido, la Resolución General N° 26/2020-DGR ha sido dictada en ejercicio legítimo de dichas facultades reglamentarias, estableciendo una exigencia específica vinculada a una instancia concreta de fiscalización —esto es, el ingreso de mercaderías a la Provincia de Formosa—, consistente en la obligación de contar con la factura o tique factura, además de la documentación de traslado, cuando se trate de operaciones de compraventa;\n\nQue, lejos de contradecir la normativa federal, dicha exigencia se encuentra en plena consonancia con la Resolución General N° 1415/2003-AFIP —a la cual esta jurisdicción se encuentra adherida mediante Resolución General N° 32/2019-DGR—, en tanto esta última regula el régimen de emisión de comprobantes, mientras que la normativa provincial establece condiciones adicionales de verificación y control en el ámbito de su competencia territorial;\n\nQue, en consecuencia, no resulta jurídicamente admisible sostener que la adhesión al régimen nacional implique una limitación a las facultades de control local, toda vez que la Provincia conserva intactas sus potestades de fiscalización, verificación y percepción de los tributos, pudiendo válidamente exigir la exhibición de la documentación respaldatoria en las oportunidades que estime pertinentes;',
+    para_dictamen:'En relación al descargo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, relativo a la supuesta colisión entre la normativa federal (Resolución General N° 1415/2003 – AFIP) y la normativa provincial (Resolución General N° 26/2020-DGR), corresponde señalar que el mismo carece de sustento jurídico, en tanto no se verifica incompatibilidad alguna sino una adecuada articulación normativa en el marco del sistema federal de potestades tributarias.\n\nEn efecto, conforme lo dispuesto por el artículo 7° del Código Fiscal – Ley N° 1589, esta Administración Tributaria se encuentra expresamente facultada para dictar normas generales obligatorias en cuanto a la forma, modo y condiciones en que deben cumplirse los deberes formales, pudiendo exigir la exhibición de documentación y comprobantes vinculados a hechos imponibles, así como también disponer que todo traslado o transporte de mercaderías que tenga origen o destino en la jurisdicción provincial se encuentre debidamente amparado por la documentación exigida por la normativa tributaria.\n\nEn este sentido, la Resolución General N° 26/2020-DGR ha sido dictada en ejercicio legítimo de dichas facultades reglamentarias, estableciendo una exigencia específica vinculada a una instancia concreta de fiscalización —esto es, el ingreso de mercaderías a la Provincia de Formosa—, consistente en la obligación de contar con la factura o tique factura, además de la documentación de traslado, cuando se trate de operaciones de compraventa.\n\nLejos de contradecir la normativa federal, dicha exigencia se encuentra en plena consonancia con la Resolución General N° 1415/2003-AFIP —a la cual esta jurisdicción se encuentra adherida mediante Resolución General N° 32/2019-DGR—, en tanto esta última regula el régimen de emisión de comprobantes, mientras que la normativa provincial establece condiciones adicionales de verificación y control en el ámbito de su competencia territorial.\n\nEn consecuencia, no resulta jurídicamente admisible sostener que la adhesión al régimen nacional implique una limitación a las facultades de control local, toda vez que la Provincia conserva intactas sus potestades de fiscalización, verificación y percepción de los tributos, pudiendo válidamente exigir la exhibición de la documentación respaldatoria en las oportunidades que estime pertinentes.' },
+  { id:'m7_aduana_interior', nombre:'M7 - Plantea aduana interior (arts. 9°, 10° y 11° CN)', descripcion:'Sostiene que la pretensión sancionatoria implica una aduana interior inconstitucional.',
+    para_resolucion:'Que, por último, la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, planteó que la pretensión sancionatoria de este organismo fiscal en la práctica implica el establecimiento de una suerte de aduana interior en flagrante menoscabo a los artículos 9°, 10° y 11° de la Constitución Nacional. Respecto a este punto, es dable señalar que el Artículo 1° del Código Fiscal de la provincia de Formosa – Ley N° 1.589, dispone que las obligaciones fiscales existentes o que se establezcan en la provincia de Formosa se regirán por las disposiciones de este código y por las leyes impositivas especiales que se dicten. Ello deviene del Sistema Federal que adopta la Nación Argentina como forma de gobierno, lo cual implica la delegación de facultades legislativas desarrolladas por el Congreso, resultando en todo conteste con el principio autonómico de los entes locales -provincias, CABA y municipios-, en cuanto poseen, dentro de las atribuciones reservadas para sí (Art. 121° C.N.), la potestad de establecer tributos en sus respectivas jurisdicciones. Se deriva de ello que el derecho público local se encuentra facultado no solo para establecer el modo de nacimiento de obligaciones tributarias dentro de su territorio, sino también de disponer los medios para tornarlas efectivas, definiendo sus respectivas formas de extinción. Lo contrario significaría reconocer limitaciones a la potestad impositiva de los Fiscos locales a partir de los preceptos del Código Civil y Comercial de la Nación, restringiendo de ese modo la relación jurídica tributaria entablada con los contribuyentes de su jurisdicción, propia del derecho público local;',
+    para_dictamen:'Por último, la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, planteó que la pretensión sancionatoria de este organismo fiscal en la práctica implica el establecimiento de una suerte de aduana interior en flagrante menoscabo a los artículos 9°, 10° y 11° de la Constitución Nacional. Respecto a este punto, es dable señalar que el Artículo 1° del Código Fiscal de la provincia de Formosa – Ley N° 1.589, dispone que las obligaciones fiscales existentes o que se establezcan en la provincia de Formosa se regirán por las disposiciones de este código y por las leyes impositivas especiales que se dicten. Ello deviene del Sistema Federal que adopta la Nación Argentina como forma de gobierno, lo cual implica la delegación de facultades legislativas desarrolladas por el Congreso, resultando en todo conteste con el principio autonómico de los entes locales -provincias, CABA y municipios-, en cuanto poseen, dentro de las atribuciones reservadas para sí (Art. 121° C.N.), la potestad de establecer tributos en sus respectivas jurisdicciones. Se deriva de ello que el derecho público local se encuentra facultado no solo para establecer el modo de nacimiento de obligaciones tributarias dentro de su territorio, sino también de disponer los medios para tornarlas efectivas, definiendo sus respectivas formas de extinción. Lo contrario significaría reconocer limitaciones a la potestad impositiva de los Fiscos locales a partir de los preceptos del Código Civil y Comercial de la Nación, restringiendo de ese modo la relación jurídica tributaria entablada con los contribuyentes de su jurisdicción, propia del derecho público local.' },
+  { id:'m8_negativa_legitimacion_constitucional', nombre:'M8 - Negativa genérica + falta legitimación + planteos constitucionales', descripcion:'Defensa amplia: niega hechos, alega no ser legitimado pasivo, plantea inconstitucionalidad/confiscatoriedad.',
+    para_resolucion:'Que, en relación al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que las defensas entabladas no resultan atendibles;\n\nQue, en primer término, la negativa genérica de los hechos carece de eficacia frente a las constancias del Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no habiendo sido desvirtuado mediante prueba idónea;\n\nQue, en cuanto al planteo relativo a la falta de legitimación pasiva, corresponde rechazar el mismo, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías recae tanto en el remitente como en los sujetos intervinientes en la operación;\n\nQue, en cuanto a los planteos de inconstitucionalidad, confiscatoriedad y afectación de derechos fundamentales, los mismos resultan manifiestamente improcedentes en esta instancia administrativa, en tanto no se acredita de qué modo concreto la aplicación de la normativa vigente vulneraría tales garantías;',
+    para_dictamen:'En relación al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que las defensas entabladas no resultan atendibles.\n\nEn primer término, la negativa genérica de los hechos carece de eficacia frente a las constancias del Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no habiendo sido desvirtuado mediante prueba idónea.\n\nEn cuanto al planteo relativo a la falta de legitimación pasiva, corresponde rechazar el mismo, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías recae tanto en el remitente como en los sujetos intervinientes en la operación.\n\nEn cuanto a los planteos de inconstitucionalidad, confiscatoriedad y afectación de derechos fundamentales, los mismos resultan manifiestamente improcedentes en esta instancia administrativa, en tanto no se acredita de qué modo concreto la aplicación de la normativa vigente vulneraría tales garantías.' }
+];
+
+// ====================================================================================
+// NAVEGACIÓN
+// ====================================================================================
+function irA(tabId){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const t = document.getElementById('tab-'+tabId);
+  if(t) t.classList.add('active');
+  document.querySelectorAll('.atp-navbar a').forEach(a=>a.classList.remove('active'));
+  const navMap = {home:'nav-home',wizard:'nav-nuevo',dictaminadores:'nav-dictaminadores',plantillas:'nav-plantillas',modelos:'nav-modelos',config:'nav-config'};
+  if(navMap[tabId]){
+    const navBtn = document.getElementById(navMap[tabId]);
+    if(navBtn) navBtn.classList.add('active');
+  }
+  window.scrollTo(0,0);
+}
+
+function irPaso(n){
+  document.querySelectorAll('.paso').forEach(p=>p.style.display='none');
+  document.getElementById('paso-'+n).style.display='block';
+  document.querySelectorAll('.wizard-step').forEach((s,i)=>{
+    s.classList.remove('active','done');
+    if(i+1===n) s.classList.add('active');
+    else if(i+1<n) s.classList.add('done');
+  });
+  if(n===4) renderDescargos();
+  if(n===5) renderResumenFinal();
+  window.scrollTo(0,0);
+}
+
+function iniciarNuevoExpediente(){
+  if(state.remitentes.length>0 || Object.keys(state.expediente).length>0){
+    if(!confirm('¿Iniciar nuevo expediente? Te recomendamos hacer un backup primero.')) return;
+  }
+  state.expediente = {};
+  state.remitentes = [];
+  saveState();
+  document.querySelectorAll('[data-field]').forEach(inp=>{
+    if(inp.dataset.field==='exp_mercaderia') inp.value='PAQUETERÍA';
+    else if(inp.dataset.field==='acta_puesto') inp.value='Lucio V. Mansilla';
+    else if(inp.dataset.field==='acta_ruta') inp.value='Ruta Nacional Nº 11, km. 1.103';
+    else if(inp.dataset.field==='acta_provincia') inp.value='Formosa';
+    else if(inp.dataset.field==='ut_cantidad') inp.value='500';
+    else if(inp.dataset.field==='dict_director') inp.value='JOSE JAVIER MOBILIO';
+    else inp.value='';
+  });
+  renderRemitentes();
+  recalcMulta();
+  irA('wizard');
+  irPaso(1);
+}
+
+// ====================================================================================
+// CAMPOS GENERALES
+// ====================================================================================
+function initFields(){
+  document.querySelectorAll('[data-field]').forEach(inp=>{
+    const k = inp.dataset.field;
+    if(state.expediente[k]!==undefined && state.expediente[k]!=='') inp.value = state.expediente[k];
+    inp.addEventListener('input',()=>{
+      state.expediente[k]=inp.value;
+      saveState();
+      if(k==='ut_cantidad'||k==='ut_valor') recalcMulta();
+    });
+  });
+  recalcMulta();
+}
+
+function recalcMulta(){
+  const c = parseFloat(state.expediente.ut_cantidad)||0;
+  const v = parseFloat(state.expediente.ut_valor)||0;
+  const t = c*v;
+  state.expediente.ut_multa = t;
+  const inp = document.querySelector('[data-field="ut_multa"]');
+  if(inp) inp.value = t? '$ '+t.toLocaleString('es-AR'):'';
+  saveState();
+}
+
+function seleccionarTipo(tipo){
+  if(tipo!=='paqueteria') return;
+  state.tipoInfraccion = tipo;
+  document.querySelectorAll('.card-infr').forEach(c=>c.classList.remove('seleccionado'));
+  document.querySelectorAll('.card-infr.activo').forEach(c=>c.classList.add('seleccionado'));
+  saveState();
+}
+
+// ====================================================================================
+// REMITENTES
+// ====================================================================================
+function escapeAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderRemitentes(){
+  const tb = document.getElementById('rem-body');
+  if(!tb) return;
+  tb.innerHTML='';
+  state.remitentes.forEach((r,idx)=>{
+    const tr = document.createElement('tr');
+    tr.className = r.estado||'sancionar';
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><input type="text" data-ridx="${idx}" data-rkey="razon_social" value="${escapeAttr(r.razon_social)}"></td>
+      <td><input type="text" data-ridx="${idx}" data-rkey="cuit" value="${escapeAttr(r.cuit)}"></td>
+      <td><input type="text" data-ridx="${idx}" data-rkey="domicilio" value="${escapeAttr(r.domicilio)}"></td>
+      <td><select data-ridx="${idx}" data-rkey="tipo_remito">
+        ${['R','X','E','Otro'].map(o=>`<option ${r.tipo_remito===o?'selected':''}>${o}</option>`).join('')}
+      </select></td>
+      <td><input type="text" data-ridx="${idx}" data-rkey="num_remito" value="${escapeAttr(r.num_remito)}"></td>
+      <td><input type="text" data-ridx="${idx}" data-rkey="fecha_remito" value="${escapeAttr(r.fecha_remito)}" placeholder="dd/mm/aaaa"></td>
+      <td><select data-ridx="${idx}" data-rkey="estado" onchange="toggleEstadoRow(${idx})">
+        <option value="sancionar" ${r.estado==='sancionar'||!r.estado?'selected':''}>✓ Aplicar sanción</option>
+        <option value="eximir" ${r.estado==='eximir'?'selected':''}>⊘ Eximir</option>
+      </select></td>
+      <td><button class="btn sm danger" onclick="eliminarRemitente(${idx})" title="Eliminar">×</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('[data-ridx]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const idx = parseInt(inp.dataset.ridx);
+      const k = inp.dataset.rkey;
+      state.remitentes[idx][k] = inp.value;
+      saveState();
+    });
+    inp.addEventListener('change',()=>{
+      const idx = parseInt(inp.dataset.ridx);
+      const k = inp.dataset.rkey;
+      state.remitentes[idx][k] = inp.value;
+      saveState();
+    });
+  });
+  const cnt = document.getElementById('contador-rem');
+  if(cnt){
+    const total = state.remitentes.length;
+    const sanc = state.remitentes.filter(r=>r.estado!=='eximir').length;
+    const exim = total-sanc;
+    cnt.innerHTML = `<span class="chip azul">${total} total</span> <span class="chip verde">${sanc} sancionar</span> ${exim>0?'<span class="chip amarillo">'+exim+' eximir</span>':''}`;
+  }
+}
+
+function toggleEstadoRow(idx){
+  state.remitentes[idx].estado = state.remitentes[idx].estado==='eximir'?'sancionar':'eximir';
+  // ya se actualizó por el event listener, solo re-render para colorear fila
+  renderRemitentes();
+}
+
+function agregarRemitente(){
+  state.remitentes.push({
+    razon_social:'',cuit:'',domicilio:'',tipo_remito:'R',num_remito:'',fecha_remito:'',
+    estado:'sancionar',
+    tipo_descargo:'no_presento',fojas_descargo:'',expte_descargo:'',
+    fojas_cedula:'',modal_notif:'',email_acuse:'',fecha_notif:'',fojas_constancia:'',
+    repres_legal:'',repres_dni:'',
+    motivo_eximicion:''
+  });
+  saveState();
+  renderRemitentes();
+}
+
+function eliminarRemitente(idx){
+  if(!confirm('¿Eliminar el remitente?')) return;
+  state.remitentes.splice(idx,1);
+  saveState();
+  renderRemitentes();
+}
+
+function abrirImportarExcel(){
+  const p = document.getElementById('importar-panel');
+  p.style.display = p.style.display==='none' ? 'block':'none';
+}
+
+function procesarImportar(){
+  const txt = document.getElementById('importar-textarea').value.trim();
+  if(!txt) return;
+  let n=0;
+  txt.split('\n').forEach(linea=>{
+    const cols = linea.split('\t');
+    if(cols.length<2) return;
+    state.remitentes.push({
+      razon_social:cols[0]||'',cuit:cols[1]||'',domicilio:cols[2]||'',
+      tipo_remito:cols[3]||'R',num_remito:cols[4]||'',fecha_remito:cols[5]||'',
+      estado:'sancionar',
+      tipo_descargo:'no_presento',fojas_descargo:'',expte_descargo:'',
+      fojas_cedula:'',modal_notif:'',email_acuse:'',fecha_notif:'',fojas_constancia:'',
+      repres_legal:'',repres_dni:'',motivo_eximicion:''
+    });
+    n++;
+  });
+  document.getElementById('importar-textarea').value='';
+  document.getElementById('importar-panel').style.display='none';
+  saveState();
+  renderRemitentes();
+  alert('Se importaron '+n+' remitente(s).');
+}
+
+// ====================================================================================
+// PASO 4: DESCARGOS
+// ====================================================================================
+function renderDescargos(){
+  const cont = document.getElementById('lista-descargos');
+  if(!cont) return;
+  if(state.remitentes.length===0){
+    cont.innerHTML = '<div class="alerta alerta-warn">⚠ No hay remitentes cargados. Volvé al paso 3.</div>';
+    return;
+  }
+  cont.innerHTML = '';
+  state.remitentes.forEach((r,idx)=>{
+    const div = document.createElement('div');
+    div.style.cssText = 'background:#fcfdff;border:1px solid var(--line);border-radius:6px;padding:14px 18px;margin-bottom:12px';
+    if(r.estado==='eximir') div.style.borderLeft='4px solid var(--warn)';
+    else div.style.borderLeft='4px solid var(--atp-azul)';
+
+    let bodyHtml='';
+    if(r.estado==='eximir'){
+      bodyHtml = `
+        <div class="grid grid-2">
+          <div>
+            <label>Motivo de eximición</label>
+            <textarea data-ridx="${idx}" data-rkey="motivo_eximicion" rows="2" placeholder="Ej: presentó factura completa en el control, error administrativo subsanado, etc.">${escapeAttr(r.motivo_eximicion||'')}</textarea>
+          </div>
+          <div>
+            <label>Fojas escrito (opcional)</label>
+            <input type="text" data-ridx="${idx}" data-rkey="fojas_descargo" value="${escapeAttr(r.fojas_descargo||'')}" placeholder="ej. 47/56">
+          </div>
+        </div>`;
+    } else {
+      bodyHtml = `
+        <div class="grid grid-3">
+          <div>
+            <label>Tipo de descargo</label>
+            <select data-ridx="${idx}" data-rkey="tipo_descargo">
+              ${state.modelos.map(m=>`<option value="${m.id}" ${r.tipo_descargo===m.id?'selected':''}>${m.nombre}</option>`).join('')}
+            </select>
+          </div>
+          <div><label>Fojas descargo</label><input type="text" data-ridx="${idx}" data-rkey="fojas_descargo" value="${escapeAttr(r.fojas_descargo||'')}" placeholder="47/56"></div>
+          <div><label>Expte. descargo</label><input type="text" data-ridx="${idx}" data-rkey="expte_descargo" value="${escapeAttr(r.expte_descargo||'')}" placeholder="A-003670/25"></div>
+        </div>
+        <h4 style="margin:12px 0 6px;font-size:13px;color:var(--atp-azul)">Notificación</h4>
+        <div class="grid grid-3">
+          <div><label>Fojas cédula</label><input type="text" data-ridx="${idx}" data-rkey="fojas_cedula" value="${escapeAttr(r.fojas_cedula||'')}" placeholder="ej. 31"></div>
+          <div><label>Modalidad</label><select data-ridx="${idx}" data-rkey="modal_notif">
+            <option value="">--</option>
+            <option ${r.modal_notif==='Buzón Fiscal Electrónico'?'selected':''}>Buzón Fiscal Electrónico</option>
+            <option ${r.modal_notif==='Correo postal'?'selected':''}>Correo postal</option>
+            <option ${r.modal_notif==='Pendiente de notificación'?'selected':''}>Pendiente de notificación</option>
+          </select></div>
+          <div><label>Email / N° CD</label><input type="text" data-ridx="${idx}" data-rkey="email_acuse" value="${escapeAttr(r.email_acuse||'')}"></div>
+          <div><label>Fecha notif.</label><input type="text" data-ridx="${idx}" data-rkey="fecha_notif" value="${escapeAttr(r.fecha_notif||'')}" placeholder="dd/mm/aaaa"></div>
+          <div><label>Fojas constancia</label><input type="text" data-ridx="${idx}" data-rkey="fojas_constancia" value="${escapeAttr(r.fojas_constancia||'')}"></div>
+          <div><label>Representante legal (opc.)</label><input type="text" data-ridx="${idx}" data-rkey="repres_legal" value="${escapeAttr(r.repres_legal||'')}"></div>
+        </div>`;
+    }
+
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <strong style="color:var(--atp-azul)">${idx+1}. ${escapeAttr(r.razon_social||'(sin nombre)')}</strong>
+          <span class="chip ${r.estado==='eximir'?'amarillo':'verde'}" style="margin-left:8px">${r.estado==='eximir'?'EXIMIR':'SANCIONAR'}</span>
+          <small style="color:var(--muted)"> · CUIT ${r.cuit||'_____'}</small>
+        </div>
+      </div>
+      ${bodyHtml}
+    `;
+    cont.appendChild(div);
+  });
+
+  cont.querySelectorAll('[data-ridx]').forEach(inp=>{
+    const upd = ()=>{
+      const idx = parseInt(inp.dataset.ridx);
+      state.remitentes[idx][inp.dataset.rkey] = inp.value;
+      saveState();
+    };
+    inp.addEventListener('input',upd);
+    inp.addEventListener('change',upd);
+  });
+}
+
+// ====================================================================================
+// PASO 5: RESUMEN
+// ====================================================================================
+function renderResumenFinal(){
+  // populate dict select
+  const sel = document.getElementById('dict-seleccion');
+  sel.innerHTML = '<option value="">-- Elegir --</option>'+state.dictaminadores.map(d=>`<option value="${d.id}">${escapeAttr(d.nombre)} (${escapeAttr(d.iniciales)})</option>`).join('');
+  // numero dict display
+  document.getElementById('dict-numero-display').value = state.config.proxNumDict + state.config.sufijoDict;
+
+  const grid = document.getElementById('resumen-grid');
+  const total = state.remitentes.length;
+  const sanc = state.remitentes.filter(r=>r.estado!=='eximir').length;
+  const exim = total - sanc;
+  const multaUnit = state.expediente.ut_multa || 0;
+  const totalRecaudacion = sanc * multaUnit;
+  grid.innerHTML = `
+    <div class="resumen-card"><div class="label">Expediente</div><div class="valor" style="font-size:13px">${escapeAttr(state.expediente.exp_numero||'-')}</div></div>
+    <div class="resumen-card"><div class="label">Carátula</div><div class="valor" style="font-size:13px">${escapeAttr(state.expediente.exp_caratula_principal||'-')}</div></div>
+    <div class="resumen-card"><div class="label">Total remitentes</div><div class="valor">${total}</div></div>
+    <div class="resumen-card"><div class="label">A sancionar</div><div class="valor" style="color:var(--atp-verde-osc)">${sanc}</div></div>
+    <div class="resumen-card"><div class="label">A eximir</div><div class="valor" style="color:var(--warn)">${exim}</div></div>
+    <div class="resumen-card"><div class="label">Multa unitaria</div><div class="valor" style="font-size:14px">${multaUnit?'$ '+multaUnit.toLocaleString('es-AR'):'-'}</div></div>
+    <div class="resumen-card"><div class="label">Total a recaudar</div><div class="valor" style="font-size:14px">${totalRecaudacion?'$ '+totalRecaudacion.toLocaleString('es-AR'):'-'}</div></div>
+  `;
+
+  // estado plantillas
+  const ep = document.getElementById('estado-plantillas');
+  ep.innerHTML = ['resolucion','dictamen','cedula','anexo'].map(t=>{
+    const p = plantillas[t];
+    const nombre = ({resolucion:'Resolución',dictamen:'Dictamen',cedula:'Cédula',anexo:'Anexo'})[t];
+    if(p) return `<span class="chip verde">✓ ${nombre} (${escapeAttr(p.nombre||'plantilla cargada')})</span>`;
+    return `<span class="chip amarillo">○ ${nombre} (se generará desde cero)</span>`;
+  }).join(' ');
+
+  // warns
+  const warns = [];
+  if(!state.expediente.exp_numero) warns.push('Falta N° de expediente');
+  if(!state.expediente.exp_caratula_principal) warns.push('Falta carátula principal');
+  if(state.remitentes.length===0) warns.push('No hay remitentes cargados');
+  if(!state.expediente.ut_valor) warns.push('Falta valor de UT');
+  const wc = document.getElementById('warns-faltantes');
+  if(warns.length>0){
+    wc.innerHTML = '<div class="alerta alerta-warn">⚠ Datos faltantes: '+warns.join(' · ')+'</div>';
+  } else {
+    wc.innerHTML = '<div class="alerta alerta-ok">✓ Todos los datos requeridos están cargados</div>';
+  }
+}
+
+function onSeleccionarDict(){
+  const id = document.getElementById('dict-seleccion').value;
+  state.expediente.dict_id_seleccionado = id;
+  saveState();
+}
+
+// ====================================================================================
+// DICTAMINADORES
+// ====================================================================================
+function renderDictaminadores(){
+  const c = document.getElementById('lista-dictaminadores');
+  if(state.dictaminadores.length===0){
+    c.innerHTML = '<div class="alerta alerta-info">No hay dictaminadores cargados todavía.</div>';
+    return;
+  }
+  c.innerHTML = state.dictaminadores.map(d=>`
+    <div class="dict-item">
+      <div class="info">
+        <strong>${escapeAttr(d.nombre)}</strong><span class="iniciales-pill">${escapeAttr(d.iniciales)}</span>
+        ${d.cargo?`<small>${escapeAttr(d.cargo)}</small>`:''}
+      </div>
+      <div class="acciones">
+        <button class="btn sm sec" onclick="editarDict('${d.id}')">✎ Editar</button>
+        <button class="btn sm danger" onclick="eliminarDict('${d.id}')">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function agregarDictaminador(){
+  const nombre = document.getElementById('nuevo-dict-nombre').value.trim();
+  const iniciales = document.getElementById('nuevo-dict-iniciales').value.trim().toUpperCase();
+  const cargo = document.getElementById('nuevo-dict-cargo').value.trim();
+  if(!nombre || !iniciales){
+    alert('Nombre e iniciales son obligatorios.');
+    return;
+  }
+  if(state.dictaminadores.some(d=>d.iniciales===iniciales)){
+    alert('Ya existe un dictaminador con esas iniciales. Las iniciales deben ser únicas.');
+    return;
+  }
+  const id = 'dict_'+Date.now();
+  state.dictaminadores.push({id,nombre,iniciales,cargo});
+  saveState();
+  document.getElementById('nuevo-dict-nombre').value='';
+  document.getElementById('nuevo-dict-iniciales').value='';
+  document.getElementById('nuevo-dict-cargo').value='';
+  renderDictaminadores();
+}
+
+function editarDict(id){
+  const d = state.dictaminadores.find(x=>x.id===id);
+  if(!d) return;
+  const nombre = prompt('Nombre:',d.nombre);
+  if(nombre===null) return;
+  const iniciales = prompt('Iniciales:',d.iniciales);
+  if(iniciales===null) return;
+  if(state.dictaminadores.some(x=>x.id!==id && x.iniciales===iniciales.toUpperCase())){
+    alert('Esas iniciales ya están en uso.');return;
+  }
+  const cargo = prompt('Cargo:',d.cargo||'');
+  d.nombre = nombre; d.iniciales = iniciales.toUpperCase(); d.cargo = cargo||'';
+  saveState();
+  renderDictaminadores();
+}
+
+function eliminarDict(id){
+  if(!confirm('¿Eliminar dictaminador?')) return;
+  state.dictaminadores = state.dictaminadores.filter(d=>d.id!==id);
+  saveState();
+  renderDictaminadores();
+}
+
+// ====================================================================================
+// PLANTILLAS
+// ====================================================================================
+async function cargarPlantilla(tipo,ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    const base64 = e.target.result.split(',')[1];
+    plantillas[tipo] = {base64, nombre:file.name, fecha:new Date().toISOString()};
+    await guardarPlantillaDB(tipo, base64, file.name);
+    renderPlantillasUI();
+    alert('Plantilla "'+file.name+'" cargada.');
+  };
+  reader.readAsDataURL(file);
+  ev.target.value='';
+}
+
+async function borrarPlantilla(tipo){
+  if(!confirm('¿Borrar la plantilla?')) return;
+  plantillas[tipo] = null;
+  await borrarPlantillaDB(tipo);
+  renderPlantillasUI();
+}
+
+function renderPlantillasUI(){
+  const map = {resolucion:'pc-res-nombre',dictamen:'pc-dict-nombre',cedula:'pc-ced-nombre',anexo:'pc-anx-nombre'};
+  for(const tipo in map){
+    const el = document.getElementById(map[tipo]);
+    const card = document.getElementById('pc-'+tipo.substring(0,3));
+    if(plantillas[tipo]){
+      el.textContent = '✓ '+plantillas[tipo].nombre;
+      if(card) card.classList.add('cargada');
+    } else {
+      el.textContent = 'Sin cargar (se generará desde cero)';
+      if(card) card.classList.remove('cargada');
+    }
+  }
+}
+
+// ====================================================================================
+// MODELOS UI
+// ====================================================================================
+function renderModelosUI(){
+  const c = document.getElementById('modelos-container');
+  c.innerHTML = state.modelos.map((m,idx)=>`
+    <details ${idx<2?'open':''} style="margin-bottom:8px;border:1px solid var(--line);border-radius:5px;padding:10px 14px;background:#fcfdff">
+      <summary style="cursor:pointer;font-weight:600;color:var(--atp-azul);font-size:13px">${escapeAttr(m.nombre)}</summary>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0">${escapeAttr(m.descripcion)}</p>
+      <label>Texto para Resolución (formato "Que, ... ;")</label>
+      <textarea rows="5" data-mid="${idx}" data-mkey="para_resolucion">${escapeAttr(m.para_resolucion)}</textarea>
+      <label style="margin-top:8px">Texto para Dictamen (formato narrativo)</label>
+      <textarea rows="5" data-mid="${idx}" data-mkey="para_dictamen">${escapeAttr(m.para_dictamen)}</textarea>
+    </details>`).join('');
+  c.querySelectorAll('[data-mid]').forEach(t=>{
+    t.addEventListener('input',()=>{
+      const idx = parseInt(t.dataset.mid);
+      state.modelos[idx][t.dataset.mkey] = t.value;
+      saveState();
+    });
+  });
+}
+
+function resetModelos(){
+  if(!confirm('¿Restaurar modelos a los originales? Se perderán las modificaciones.')) return;
+  state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+  saveState();
+  renderModelosUI();
+}
+
+// ====================================================================================
+// CONFIGURACIÓN
+// ====================================================================================
+function loadConfigUI(){
+  document.getElementById('cfg-prox-dict').value = state.config.proxNumDict;
+  document.getElementById('cfg-sufijo-dict').value = state.config.sufijoDict;
+}
+
+function guardarConfig(){
+  state.config.proxNumDict = parseInt(document.getElementById('cfg-prox-dict').value)||126;
+  state.config.sufijoDict = document.getElementById('cfg-sufijo-dict').value;
+  saveState();
+}
+
+// ====================================================================================
+// GENERACIÓN DE TEXTOS PARA DOCUMENTOS
+// ====================================================================================
+function exF(k,d='_____'){return state.expediente[k]||d;}
+function aplicarVars(t,r){
+  return t.replace(/\{\{razon_social\}\}/g,r.razon_social||'_____')
+          .replace(/\{\{cuit\}\}/g,r.cuit||'_____')
+          .replace(/\{\{fojas_descargo\}\}/g,r.fojas_descargo||'_____');
+}
+
+function buildContext(){
+  const e = state.expediente;
+  const ut_multa_str = e.ut_multa? '$ '+Number(e.ut_multa).toLocaleString('es-AR')+',00':'$ _____';
+  const dict = state.dictaminadores.find(d=>d.id===e.dict_id_seleccionado) || {nombre:'',iniciales:''};
+
+  // listado de remitos (sancionados)
+  const sanc = state.remitentes.filter(r=>r.estado!=='eximir');
+  const exim = state.remitentes.filter(r=>r.estado==='eximir');
+
+  const remitos_listado = sanc.map(r=>
+    `UN (1) Remito Tipo "${r.tipo_remito||'R'}" N° ${r.num_remito||'_____'}${r.fecha_remito?` de fecha ${r.fecha_remito}`:''} emitido por la firma ${r.razon_social}, CUIT N° ${r.cuit||'_____'}`
+  ).join('; ');
+
+  const sin_descargo_arr = sanc.filter(r=>r.tipo_descargo==='no_presento');
+  const sin_descargo_listado = sin_descargo_arr.length>0
+    ? sin_descargo_arr.map(r=>`${r.razon_social}, CUIT N° ${r.cuit||'_____'}`).join('; ')
+    : '';
+
+  // cedulas (en formato "Que, a fs. X obra...")
+  const cedulas_listado = sanc.filter(r=>r.fojas_cedula).map(r=>{
+    let medio = '';
+    if(r.modal_notif==='Buzón Fiscal Electrónico') medio = `enviada mediante Buzón Fiscal Electrónico: ${r.email_acuse||'_____'}`;
+    else if(r.modal_notif==='Correo postal') medio = `enviada mediante Correo postal (Acuse N° ${r.email_acuse||'_____'})`;
+    else if(r.modal_notif==='Pendiente de notificación') return `Que, respecto de la firma ${r.razon_social}, CUIT N° ${r.cuit||'_____'}, se encuentra pendiente de notificación;`;
+    const fechaTxt = r.fecha_notif?`, habiéndose notificado en fecha ${r.fecha_notif}`:'';
+    const constancia = r.fojas_constancia?`, conforme constancia de fs. ${r.fojas_constancia}`:'';
+    return `Que, a fs. ${r.fojas_cedula} obra Cédula de Notificación dirigida a la firma ${r.razon_social}, CUIT N° ${r.cuit||'_____'}, ${medio}${fechaTxt}${constancia};`;
+  }).join('\n\n');
+
+  // descargos presentados (descripcion)
+  const descargos_presentados = sanc.filter(r=>r.tipo_descargo!=='no_presento' && r.fojas_descargo).map(r=>{
+    return `Que, a fs. ${r.fojas_descargo} obra escrito presentado ${r.expte_descargo?`(Expediente ${r.expte_descargo}) `:''}por la firma ${r.razon_social}, CUIT N° ${r.cuit||'_____'}, mediante el cual presentó descargo en relación a la infracción endilgada;`;
+  }).join('\n\n');
+
+  // respuestas (fundamento) - para resolución
+  const respuestas_descargos_res = sanc.filter(r=>r.tipo_descargo!=='no_presento' && r.fojas_descargo).map(r=>{
+    const m = state.modelos.find(mm=>mm.id===r.tipo_descargo);
+    if(!m||!m.para_resolucion) return '';
+    return aplicarVars(m.para_resolucion, r);
+  }).filter(s=>s).join('\n\n');
+
+  const respuestas_descargos_dict = sanc.filter(r=>r.tipo_descargo!=='no_presento' && r.fojas_descargo).map(r=>{
+    const m = state.modelos.find(mm=>mm.id===r.tipo_descargo);
+    if(!m||!m.para_dictamen) return '';
+    return aplicarVars(m.para_dictamen, r);
+  }).filter(s=>s).join('\n\n');
+
+  // párrafo eximidos
+  let eximidos_listado = '';
+  if(exim.length>0){
+    eximidos_listado = `Que, en relación a la firma ${exim.map(r=>r.razon_social+', CUIT N° '+(r.cuit||'_____')+(r.motivo_eximicion?' ('+r.motivo_eximicion+')':'')).join('; ')}, corresponde eximirla de la sanción endilgada por las circunstancias particulares verificadas en autos;`;
+  }
+
+  // anexo (filas para sancionados)
+  const anexo_filas = sanc.map((r,i)=>({
+    n: i+1,
+    razon_social: r.razon_social||'_____',
+    cuit: r.cuit||'_____',
+    domicilio: r.domicilio||'_____',
+    remito: (r.tipo_remito||'R')+' N° '+(r.num_remito||'_____'),
+    multa: ut_multa_str,
+    notif: r.modal_notif||'',
+    fecha_notif: r.fecha_notif||''
+  }));
+
+  return {
+    expediente: e.exp_numero||'_____',
+    caratula: e.exp_caratula_principal||'_____',
+    caratula_completa: `PUESTO DE CONTROL "${e.acta_puesto||'_____'}" S/ ACTA DE COMPROBACIÓN INFRACCIÓN AL ART. 42 INC. A CÓDIGO FISCAL LEY 1.589 – PAQUETERÍA – ${(e.exp_caratula_principal||'_____').toUpperCase()}`,
+    fecha_acta: e.acta_fecha||'_____',
+    hora_acta: e.acta_hora||'_____',
+    fojas_acta: e.acta_fojas||'_____',
+    puesto_control: e.acta_puesto||'_____',
+    ruta: e.acta_ruta||'_____',
+    provincia: e.acta_provincia||'Formosa',
+    trans_empresa: e.trans_empresa||'_____',
+    trans_cuit: e.trans_cuit||'_____',
+    trans_domicilio: e.trans_domicilio||'_____',
+    trans_camion: e.trans_camion||'_____',
+    trans_dominio: e.trans_dominio||'_____',
+    trans_dominio_aco: e.trans_dominio_aco||'',
+    trans_chofer: e.trans_chofer||'_____',
+    trans_chofer_dni: e.trans_chofer_dni||'_____',
+    trans_origen: e.trans_origen||'_____',
+    trans_destino: e.trans_destino||'_____',
+    mercaderia: e.exp_mercaderia||'PAQUETERÍA',
+    ut_cantidad: e.ut_cantidad||'_____',
+    ut_valor: e.ut_valor||'_____',
+    ut_valor_letras: (e.ut_valor_letras||'_____').toUpperCase(),
+    ut_multa: ut_multa_str,
+    ut_multa_letras: (e.ut_multa_letras||'_____').toUpperCase(),
+    dict_numero: state.config.proxNumDict + state.config.sufijoDict,
+    dict_fecha: e.dict_fecha||'_____',
+    dict_director: e.dict_director||'_____',
+    dict_nombre: dict.nombre||'',
+    dict_iniciales: dict.iniciales||'',
+    remitos_listado,
+    cedulas_listado,
+    descargos_presentados,
+    respuestas_descargos: respuestas_descargos_res,
+    respuestas_descargos_dictamen: respuestas_descargos_dict,
+    sin_descargo_listado,
+    eximidos_listado,
+    anexo_filas,
+    sancionados: sanc,
+    eximidos: exim
+  };
+}
+
+// ====================================================================================
+// PLANTILLAS DE TEXTO (FALLBACK CUANDO NO HAY .DOCX)
+// ====================================================================================
+function buildResolucionTexto(ctx){
+  let txt = `FORMOSA,
+
+
+VISTO:
+
+El expediente ${ctx.expediente}, caratulado: "${ctx.caratula_completa}" del Registro de Mesa de Entradas y de Salidas de esta Administración Tributaria Provincial, y;
+
+CONSIDERANDO:
+
+Que, las actuaciones referidas en el Visto dan cuenta de un procedimiento de control y verificación llevado a cabo por los agentes de este Organismo Fiscal, en virtud del cual se verificaron conductas que configurarían prima facie la infracción prevista en el artículo 42º, inciso a) del Código Fiscal - Ley Nº 1.589, pasibles de la sanción de multa de ${ctx.ut_cantidad} UNIDADES TRIBUTARIAS (${ctx.ut_cantidad} U.T.) y de la sanción de clausura de TRES A DIEZ (3 a 10) días del local, establecimiento o recinto comercial del infractor, a tenor de lo dispuesto por el artículo 42º del Código Fiscal - Ley Nº 1589 y sus modificatorias, y artículo 59º, inciso 12) de la Ley Impositiva Nº 1.590;
+
+Que, a fs. ${ctx.fojas_acta} rola Acta de Comprobación, labrada el día ${ctx.fecha_acta}, siendo las ${ctx.hora_acta}, oportunidad en la cual los agentes de esta Administración Tributaria Provincial, destacados a cumplir funciones en el Puesto de Control Caminero "${ctx.puesto_control}", ubicado sobre ${ctx.ruta} de la provincia de ${ctx.provincia}, iniciaron un procedimiento de control y verificación del tipo de mercaderías, cantidad, precio, procedencia, destino de las mismas y la documentación respaldatoria de las operaciones gravadas por el Impuesto sobre los Ingresos Brutos, labrándose la correspondiente Acta de Comprobación, de conformidad con las previsiones del artículo 7º inciso 18) y el artículo 44º del Código Fiscal de la Provincia de Formosa - Ley N° 1.589 y sus modificatorias;
+
+Que, en ese marco, se verificó el ingreso de una unidad de transporte, propiedad de la firma ${ctx.trans_empresa}, CUIT N° ${ctx.trans_cuit}, con domicilio sito en ${ctx.trans_domicilio}, identificada como Camión Marca: ${ctx.trans_camion}, Dominio: ${ctx.trans_dominio}${ctx.trans_dominio_aco?', C/Semirremolque Dominio: '+ctx.trans_dominio_aco:''}, al mando del señor ${ctx.trans_chofer}, DNI N° ${ctx.trans_chofer_dni}, quién manifestó que transportaba: ${ctx.mercaderia}. Preguntado respecto del lugar donde se efectuó la carga de los bienes y el lugar de destino, respondió que la carga se realizó en la ${ctx.trans_origen}, teniendo como destino la ${ctx.trans_destino};
+
+Que, conforme lo verificado, el ingreso de los bienes a la jurisdicción provincial respondería a operaciones de compraventa, circunstancia por la cual se solicitó al responsable del traslado de los productos y mercaderías que exhiba las facturas o tiques facturas de las operaciones correspondientes, conforme lo normado por el artículo 1° de la Resolución General N° 26/2020-DGR, exhibiendo como documentos de respaldo ${ctx.remitos_listado};
+
+Que, en consecuencia, se verificaron sendos incumplimientos de los recaudos que establece el artículo 1° de la Resolución General N° 026/2020-DGR, al no entregar la Factura o Tique Factura, configurándose así prima facie la infracción prevista en el artículo 42°, inciso a) del Código Fiscal – Ley N° 1.589. Todas las conductas endilgadas resultan pasibles de la sanción de multa de ${ctx.ut_cantidad} UNIDADES TRIBUTARIAS (${ctx.ut_cantidad} U.T.), equivalente a la suma de PESOS ${ctx.ut_multa_letras} (${ctx.ut_multa}), siendo el valor de la unidad tributaria de PESOS ${ctx.ut_valor_letras} ($ ${ctx.ut_valor},00) al momento de cometida la infracción, y la sanción de Clausura de TRES (3) a DIEZ (10) días del recinto, local o establecimiento comercial de que se trate;
+
+`;
+
+  if(ctx.cedulas_listado) txt += ctx.cedulas_listado + '\n\n';
+  if(ctx.descargos_presentados) txt += ctx.descargos_presentados + '\n\n';
+  if(ctx.respuestas_descargos) txt += ctx.respuestas_descargos + '\n\n';
+  if(ctx.sin_descargo_listado) txt += `Que, es dable señalar que ante la Mesa General de Entradas de esta Administración no se registra presentación de Descargo por parte de las firmas ${ctx.sin_descargo_listado}, pese a estar debidamente notificadas;\n\n`;
+  if(ctx.eximidos_listado) txt += ctx.eximidos_listado + '\n\n';
+
+  txt += `Que, conforme los elementos obrantes en las presentes actuaciones, ninguno de los descargos analizados logra desvirtuar los hechos constatados en el Acta de Comprobación, manteniéndose incólume la infracción prevista en el artículo 42° del Código Fiscal;
+
+Que, obra Dictamen Jurídico del Departamento Procedimiento por Infracciones Formales, que exige el inciso 4) del artículo 30º del Decreto Ley Nº 971/80;
+
+Que en virtud a ello y conforme a las facultades conferidas por la Ley N° 1.733, nada obsta al dictado del acto administrativo pertinente;
+
+Por ello:
+
+EL ADMINISTRADOR GENERAL DE LA ADMINISTRACIÓN TRIBUTARIA DE LA PROVINCIA DE FORMOSA
+
+R E S U E L V E:
+
+ARTÍCULO 1°: DECLÁRASE a cada uno de los sujetos mencionados en el anexo de la presente resolución, incursos en la infracción prevista en el artículo 42°, inciso a) del Código Fiscal - Ley N° 1.589 y sus modificatorias.
+
+ARTÍCULO 2º: APLÍCASE a cada uno de los sujetos mencionados en el anexo de la presente resolución, la sanción de multa establecida en ${ctx.ut_cantidad} UNIDADES TRIBUTARIAS (${ctx.ut_cantidad} U.T.) equivalente a PESOS ${ctx.ut_multa_letras} (${ctx.ut_multa}), siendo el valor de la Unidad Tributaria de PESOS ${ctx.ut_valor_letras} ($ ${ctx.ut_valor},00) al momento de cometida la infracción.
+
+ARTÍCULO 3º: INTÍMASE a cada uno de los sujetos mencionados en el anexo a que en el plazo de diez (10) días contados a partir de la notificación de la presente ingresen la suma de PESOS ${ctx.ut_multa_letras} (${ctx.ut_multa}).
+
+ARTÍCULO 4º: LA falta de pago de las multas dará lugar al libramiento de la Boleta de Deuda, conforme art. 93° y sgtes. del Código Fiscal.
+
+ARTÍCULO 5º: HÁGASE SABER que las sanciones podrán ser recurridas mediante Recurso de Apelación conforme art. 49° del Código Fiscal, dentro de los CINCO (05) días de su notificación, previo pago del diez por mil (10‰) sobre el monto de la determinación y/o multa en concepto de Tasa Retributiva de Servicios.
+
+ARTÍCULO 6º: REGÍSTRESE, notifíquese a quienes correspondan. Cumplido, ARCHÍVESE.
+
+
+${ctx.dict_iniciales||'D.J.T.'}
+P.I.F.
+F.M.P.`;
+
+  return txt;
+}
+
+function buildDictamenTexto(ctx){
+  let txt = `DICTAMEN N°: ${ctx.dict_numero}.
+
+Expediente ${ctx.expediente}, caratulado: "${ctx.caratula_completa}".
+
+
+SR.
+- DIRECTOR DE JURÍDICA Y TÉCNICA
+DR. ${ctx.dict_director}
+- SU DESPACHO:
+
+Viene a este Departamento el expediente supra referenciado, en virtud del cual dan cuenta de un procedimiento de control y verificación llevado a cabo por los agentes de este Organismo Fiscal, en virtud del cual se verificaron conductas que configurarían prima facie la infracción prevista en el artículo 42º, inciso a) del Código Fiscal - Ley Nº 1.589.
+
+A fs. ${ctx.fojas_acta} rola Acta de Comprobación, labrada el día ${ctx.fecha_acta}, siendo las ${ctx.hora_acta}, oportunidad en la cual los agentes destacados en el Puesto de Control Caminero "${ctx.puesto_control}", ubicado sobre ${ctx.ruta} de la provincia de ${ctx.provincia}, iniciaron un procedimiento de control y verificación.
+
+En ese marco, se verificó el ingreso de una unidad de transporte, propiedad de la firma ${ctx.trans_empresa}, CUIT N° ${ctx.trans_cuit}, identificada como Camión Marca: ${ctx.trans_camion}, Dominio: ${ctx.trans_dominio}, al mando del señor ${ctx.trans_chofer}, DNI N° ${ctx.trans_chofer_dni}, quién manifestó que transportaba: ${ctx.mercaderia}. La carga se realizó en la ${ctx.trans_origen}, teniendo como destino la ${ctx.trans_destino}.
+
+Conforme lo verificado, el ingreso de los bienes a la jurisdicción provincial respondería a operaciones de compraventa, exhibiendo como documentos de respaldo ${ctx.remitos_listado}.
+
+Se verificaron sendos incumplimientos de los recaudos que establece el artículo 1° de la Resolución General N° 026/2020-DGR. Las conductas resultan pasibles de la sanción de multa de ${ctx.ut_cantidad} UNIDADES TRIBUTARIAS (${ctx.ut_cantidad} U.T.), equivalente a la suma de PESOS ${ctx.ut_multa_letras} (${ctx.ut_multa}), siendo el valor de la unidad tributaria de PESOS ${ctx.ut_valor_letras} ($ ${ctx.ut_valor},00) al momento de cometida la infracción.
+
+`;
+  if(ctx.cedulas_listado) txt += ctx.cedulas_listado.replace(/^Que, /gm,'').replace(/;\n\n/g,'.\n\n').replace(/;$/,'.') + '\n\n';
+  if(ctx.descargos_presentados) txt += ctx.descargos_presentados.replace(/^Que, /gm,'').replace(/;$/gm,'.') + '\n\n';
+  if(ctx.respuestas_descargos_dictamen) txt += ctx.respuestas_descargos_dictamen + '\n\n';
+  if(ctx.sin_descargo_listado) txt += `Es dable señalar que ante la Mesa General de Entradas de esta Administración no se registra presentación de Descargo por parte de las firmas ${ctx.sin_descargo_listado}, pese a estar debidamente notificadas.\n\n`;
+  if(ctx.eximidos_listado) txt += ctx.eximidos_listado.replace(/^Que, /,'').replace(/;$/,'.') + '\n\n';
+
+  txt += `Por todo lo expuesto, este Departamento sugiere aplicar a cada uno de los sujetos mencionados en el anexo de la Resolución la sanción de multa de ${ctx.ut_cantidad} UNIDADES TRIBUTARIAS (${ctx.ut_cantidad} U.T.), equivalentes a la suma de PESOS ${ctx.ut_multa_letras} (${ctx.ut_multa}).
+
+Es el Dictamen del Departamento Procedimiento por Infracciones Formales.
+
+FORMOSA, ${ctx.dict_fecha}.
+
+
+${ctx.dict_iniciales||'D.J.T.'}
+P.I.F.
+F.M.P.`;
+  return txt;
+}
+
+function buildAnexoTexto(ctx){
+  let txt = `ANEXO RESOLUCIÓN
+EXPEDIENTE: ${ctx.expediente}
+CARÁTULA: ${ctx.caratula_completa}
+
+`;
+  ctx.anexo_filas.forEach(f=>{
+    txt += `${f.n}. ${f.razon_social} | CUIT: ${f.cuit} | Dom.: ${f.domicilio} | Remito: ${f.remito} | Multa: ${f.multa}${f.notif?' | Notif.: '+f.notif:''}${f.fecha_notif?' ('+f.fecha_notif+')':''}\n\n`;
+  });
+  return txt;
+}
+
+function buildCedulaTexto(ctx, r){
+  return `C É D U L A
+
+
+${r.razon_social}
+CUIT: ${r.cuit||'_____'}
+DOMICILIO FISCAL: ${r.domicilio||'_____'}
+
+
+                          Hago saber a UD., que en las actuaciones caratuladas: ${ctx.expediente}-EXP - "${ctx.caratula_completa}", que se tramita ante la ADMINISTRACIÓN TRIBUTARIA DE LA PROVINCIA DE FORMOSA sito en calle AYACUCHO Nº 810 de esta ciudad, se ha dispuesto notificarle la RESOLUCIÓN INTERNA dictada por el Administrador General. Se adjunta un ejemplar original del mencionado acto a los efectos que correspondan.
+
+                          QUEDA UD., DEBIDAMENTE NOTIFICADO
+
+                                    formosa,
+
+
+${ctx.dict_iniciales||'D.J.T.'}
+P.I.F.
+F.M.P.`;
+}
+
+// ====================================================================================
+// VISTAS PREVIAS
+// ====================================================================================
+function vistaPrevia(tipo){
+  const ctx = buildContext();
+  let titulo='', contenido='';
+  if(tipo==='resolucion'){ titulo='Vista previa: Resolución'; contenido = buildResolucionTexto(ctx); }
+  else if(tipo==='dictamen'){ titulo='Vista previa: Dictamen'; contenido = buildDictamenTexto(ctx); }
+  else if(tipo==='anexo'){ titulo='Vista previa: Anexo'; contenido = buildAnexoTexto(ctx); }
+  else if(tipo==='cedulas'){
+    titulo='Vista previa: Cédulas (todas)';
+    contenido = ctx.sancionados.map(r=>buildCedulaTexto(ctx,r)).join('\n\n────────────────────────────────────\n\n');
+  }
+  document.getElementById('modal-preview-titulo').textContent = titulo;
+  document.getElementById('modal-preview-content').textContent = contenido;
+  document.getElementById('modal-preview').classList.add('show');
+}
+
+// ====================================================================================
+// GENERACIÓN DE .DOCX
+// ====================================================================================
+
+// Genera un .docx desde cero a partir de texto plano (fallback)
+function generarDocxDesdeCero(texto, titulo){
+  // Construyo manualmente un .docx mínimo válido
+  const parrafos = texto.split('\n').map(linea=>{
+    const t = (linea||'').trim();
+    if(t.length===0) return '<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>';
+    // Detectar títulos en mayúscula corta
+    const esTitulo = /^[A-ZÁÉÍÓÚÑ\s°ºNª()\-:.,]+$/.test(t) && t.length<80 && !t.includes(' ya ') && !t.includes(' la ');
+    const esArticulo = /^ARTÍCULO\s+\d+/.test(t) || /^ARTICULO\s+\d+/.test(t);
+    const negrita = esTitulo || esArticulo || /^(VISTO|CONSIDERANDO|R E S U E L V E|DICTAMEN N°|FORMOSA,|ANEXO|C É D U L A)/.test(t);
+    const escaped = escaparXML(linea);
+    if(negrita){
+      return `<w:p><w:pPr><w:spacing w:after="120"/><w:jc w:val="${esArticulo?'both':'left'}"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escaped}</w:t></w:r></w:p>`;
+    }
+    return `<w:p><w:pPr><w:spacing w:after="120"/><w:jc w:val="both"/></w:pPr><w:r><w:t xml:space="preserve">${escaped}</w:t></w:r></w:p>`;
+  }).join('');
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+${parrafos}
+<w:sectPr>
+<w:pgSz w:w="12240" w:h="15840"/>
+<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+</w:sectPr>
+</w:body>
+</w:document>`;
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults>
+<w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr></w:rPrDefault>
+</w:docDefaults>
+</w:styles>`;
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypesXml);
+  zip.folder('_rels').file('.rels', relsXml);
+  zip.folder('word').file('document.xml', documentXml);
+  zip.folder('word').file('styles.xml', stylesXml);
+  zip.folder('word/_rels').file('document.xml.rels', docRelsXml);
+
+  return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+
+function escaparXML(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Aplica plantilla .docx con docxtemplater
+function aplicarPlantilla(base64, ctx){
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0;i<len;i++) bytes[i] = binary.charCodeAt(i);
+  const zip = new PizZip(bytes);
+  const doc = new docxtemplater(zip, {paragraphLoop:true, linebreaks:true});
+  doc.render(ctx);
+  return doc.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+
+async function generarTodo(){
+  // validar
+  const warns = [];
+  if(!state.expediente.exp_numero) warns.push('Falta N° de expediente');
+  if(!state.expediente.exp_caratula_principal) warns.push('Falta carátula');
+  if(state.remitentes.filter(r=>r.estado!=='eximir').length===0) warns.push('Debe haber al menos un remitente a sancionar');
+  if(warns.length>0){
+    alert('No se puede generar:\n\n- '+warns.join('\n- '));
+    return;
+  }
+
+  const ctx = buildContext();
+  const expClean = (ctx.expediente||'expte').replace(/[/\\?]/g,'_');
+
+  try{
+    // RESOLUCIÓN
+    let blob;
+    if(plantillas.resolucion){
+      blob = await aplicarPlantilla(plantillas.resolucion.base64, ctx);
+    } else {
+      blob = await generarDocxDesdeCero(buildResolucionTexto(ctx), 'Resolucion');
+    }
+    saveAs(blob, `RESOLUCION_${expClean}.docx`);
+
+    // DICTAMEN
+    if(plantillas.dictamen){
+      blob = await aplicarPlantilla(plantillas.dictamen.base64, ctx);
+    } else {
+      blob = await generarDocxDesdeCero(buildDictamenTexto(ctx), 'Dictamen');
+    }
+    saveAs(blob, `DICTAMEN_${expClean}.docx`);
+
+    // ANEXO
+    if(plantillas.anexo){
+      blob = await aplicarPlantilla(plantillas.anexo.base64, ctx);
+    } else {
+      blob = await generarDocxDesdeCero(buildAnexoTexto(ctx), 'Anexo');
+    }
+    saveAs(blob, `ANEXO_${expClean}.docx`);
+
+    // CÉDULAS - 1 unificada + opción individuales
+    const cedulasTexto = ctx.sancionados.map(r=>buildCedulaTexto(ctx,r)).join('\n\n\f\n\n');
+    if(plantillas.cedula){
+      // Aplicar plantilla a cada uno y zipear
+      const zipCed = new JSZip();
+      for(let i=0;i<ctx.sancionados.length;i++){
+        const r = ctx.sancionados[i];
+        const ctxCed = {...ctx, rs:r.razon_social, cuit:r.cuit, domicilio:r.domicilio, res_numero:'_____'};
+        const bced = await aplicarPlantilla(plantillas.cedula.base64, ctxCed);
+        const arrBuf = await bced.arrayBuffer();
+        const safeName = (r.razon_social||'remitente').replace(/[^a-zA-Z0-9_-]/g,'_').substring(0,40);
+        zipCed.file(`Cedula_${(i+1).toString().padStart(2,'0')}_${safeName}.docx`, arrBuf);
+      }
+      const zipBlob = await zipCed.generateAsync({type:'blob'});
+      saveAs(zipBlob, `CEDULAS_${expClean}.zip`);
+    } else {
+      blob = await generarDocxDesdeCero(cedulasTexto, 'Cedulas');
+      saveAs(blob, `CEDULAS_${expClean}.docx`);
+    }
+
+    // incrementar dictamen
+    state.config.proxNumDict++;
+    saveState();
+    loadConfigUI();
+
+    alert('✓ Documentos generados correctamente.\n\nSe descargaron:\n- RESOLUCIÓN\n- DICTAMEN\n- ANEXO\n- CÉDULAS\n\nN° dictamen incrementado a '+state.config.proxNumDict);
+
+  }catch(err){
+    console.error(err);
+    alert('Error al generar documentos: '+(err.message||err));
+  }
+}
+
+// ====================================================================================
+// BACKUP
+// ====================================================================================
+function exportarBackup(){
+  const data = {state, plantillas:Object.fromEntries(Object.entries(plantillas).filter(([k,v])=>v).map(([k,v])=>[k,{nombre:v.nombre,base64:v.base64}]))};
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'backup_atp_v2_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function importarBackup(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  if(!confirm('¿Reemplazar todos los datos actuales con los del archivo?')) return;
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.state) state = data.state;
+      if(!state.modelos) state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+      saveState();
+      if(data.plantillas){
+        for(const [tipo,p] of Object.entries(data.plantillas)){
+          plantillas[tipo] = p;
+          await guardarPlantillaDB(tipo, p.base64, p.nombre);
+        }
+      }
+      initFields();
+      renderRemitentes();
+      renderModelosUI();
+      renderDictaminadores();
+      renderPlantillasUI();
+      loadConfigUI();
+      alert('✓ Backup restaurado.');
+    }catch(err){
+      alert('Error: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+async function borrarTodo(){
+  if(!confirm('¿BORRAR TODOS los datos? Esta acción no se puede deshacer.')) return;
+  if(!confirm('Última confirmación: se borrarán expedientes, dictaminadores, plantillas y configuración. ¿Continuar?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  for(const t of ['resolucion','dictamen','cedula','anexo']) await borrarPlantillaDB(t);
+  location.reload();
+}
+
+// ====================================================================================
+// INIT
+// ====================================================================================
+async function init(){
+  loadState();
+  await cargarPlantillasDB();
+  initFields();
+  renderRemitentes();
+  renderModelosUI();
+  renderDictaminadores();
+  renderPlantillasUI();
+  loadConfigUI();
+
+  // fecha de hoy
+  const hoy = new Date();
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const fechaFmt = `Formosa, ${hoy.getDate().toString().padStart(2,'0')}/${(hoy.getMonth()+1).toString().padStart(2,'0')}/${hoy.getFullYear()}`;
+  document.getElementById('fecha-display').textContent = fechaFmt;
+  document.getElementById('footer-fecha').textContent = hoy.toLocaleDateString('es-AR');
+}
+
+init();
+</script>
+
+</body>
+</html>
