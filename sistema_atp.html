@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema ATP - Generador de Resoluciones</title>
+<style>
+:root{
+  --bg:#f4f1ea;
+  --panel:#fff;
+  --ink:#1c1c1c;
+  --muted:#6b6b6b;
+  --line:#d6d2c4;
+  --accent:#7a1d1d;
+  --accent-light:#a83232;
+  --ok:#2e6b3a;
+  --warn:#a86f1d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Verdana,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;font-size:14px}
+header{background:var(--accent);color:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #4a0f0f}
+header h1{font-size:18px;font-weight:600;letter-spacing:.3px}
+header small{opacity:.85;font-size:12px}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 58px)}
+nav{background:#2a2624;color:#e8e3d6;padding:14px 0}
+nav button{display:block;width:100%;background:transparent;color:#e8e3d6;border:none;text-align:left;padding:11px 22px;cursor:pointer;font-size:13px;border-left:3px solid transparent;font-family:inherit}
+nav button:hover{background:#3a3431}
+nav button.active{background:#3a3431;border-left-color:var(--accent-light);color:#fff;font-weight:600}
+nav .section-title{padding:14px 22px 6px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#a89e8b}
+main{padding:24px 32px;overflow-x:auto}
+.tab{display:none}
+.tab.active{display:block}
+h2{font-size:20px;margin-bottom:4px;color:var(--accent)}
+.subtitle{color:var(--muted);margin-bottom:18px;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.panel h3{font-size:15px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--accent)}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.grid-4{grid-template-columns:1fr 1fr 1fr 1fr}
+label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#444}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:4px;font-family:inherit;font-size:13px;background:#fdfcf8}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+textarea{resize:vertical;min-height:60px;font-size:12px}
+small.hint{color:var(--muted);font-size:11px;display:block;margin-top:3px}
+button.btn{background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+button.btn:hover{background:var(--accent-light)}
+button.btn-sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button.btn-sec:hover{background:#f0ece0}
+button.btn-danger{background:#a83232}
+button.btn-sm{padding:5px 10px;font-size:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.toolbar .grow{flex-grow:1}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:12px}
+table th{background:#2a2624;color:#fff;text-align:left;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+table td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table tr:nth-child(even) td{background:#faf8f1}
+table input,table select,table textarea{padding:4px 5px;font-size:12px;background:transparent;border:1px solid transparent}
+table input:hover,table select:hover,table textarea:hover{border-color:var(--line);background:#fff}
+table input:focus,table select:focus,table textarea:focus{border-color:var(--accent);background:#fff}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.status-ok{background:#e2f0e4;color:var(--ok)}
+.status-warn{background:#f8edd8;color:var(--warn)}
+.status-info{background:#e0e7f0;color:#1d4a7a}
+.output-area{background:#fff;border:1px solid var(--line);border-radius:6px;padding:0;margin-top:12px}
+.output-header{background:#2a2624;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0}
+.output-header h4{font-size:14px}
+.output-content{padding:18px 24px;white-space:pre-wrap;font-family:'Cambria','Times New Roman',serif;font-size:13px;line-height:1.55;max-height:600px;overflow-y:auto;background:#fdfcf8}
+.output-content.markdown{font-family:'Segoe UI',Tahoma,sans-serif}
+.copy-btn{background:#fff;color:var(--ink);border:none;padding:5px 12px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600}
+.copy-btn:hover{background:#f0ece0}
+.copy-btn.copied{background:var(--ok);color:#fff}
+.descargo-modelo{background:#faf8f1;border-left:3px solid var(--accent-light);padding:10px 14px;margin-bottom:8px;font-size:12px}
+.descargo-modelo h5{font-size:13px;color:var(--accent);margin-bottom:4px}
+.descargo-modelo p{color:var(--muted);font-size:12px}
+.alert{padding:10px 14px;border-radius:4px;margin-bottom:14px;font-size:13px}
+.alert-info{background:#e0e7f0;border-left:3px solid #1d4a7a;color:#1d4a7a}
+.alert-warn{background:#f8edd8;border-left:3px solid var(--warn);color:#7a4d10}
+.row-actions{display:flex;gap:4px}
+.totals{background:#faf8f1;border:1px solid var(--line);padding:14px 18px;border-radius:5px;margin-top:14px;display:flex;gap:30px;font-size:13px}
+.totals strong{color:var(--accent);font-size:16px}
+.export-buttons{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.export-buttons button{flex:1;min-width:180px;padding:14px;font-size:13px}
+hr{border:none;border-top:1px dashed var(--line);margin:14px 0}
+details{margin-bottom:8px}
+details summary{cursor:pointer;font-weight:600;padding:6px;font-size:13px;color:var(--accent)}
+details[open] summary{margin-bottom:6px}
+.kbd{font-family:monospace;background:#eee;padding:1px 5px;border-radius:3px;font-size:11px;border:1px solid #ccc}
+.tag-required::after{content:" *";color:var(--accent)}
+input[type="number"]{appearance:textfield}
+@media print{
+  nav,header,.toolbar,.export-buttons,.copy-btn{display:none!important}
+  main{padding:0}
+  .panel{box-shadow:none;border:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>SISTEMA ATP - Generador de Resoluciones</h1>
+    <small>Infracción Art. 42° inc. a) Código Fiscal Ley 1.589 / RG 26/2020-DGR · Paquetería</small>
+  </div>
+  <div>
+    <button class="btn btn-sec btn-sm" onclick="exportarBackup()">💾 Backup</button>
+    <button class="btn btn-sec btn-sm" onclick="document.getElementById('importInput').click()">📂 Importar</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarBackup(event)">
+    <button class="btn btn-sec btn-sm" onclick="nuevoExpediente()">🆕 Nuevo Expte</button>
+  </div>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="section-title">DATOS DEL EXPEDIENTE</div>
+    <button class="navbtn active" data-tab="expediente">1. Datos del Acta</button>
+    <button class="navbtn" data-tab="endilgados">2. Remitentes / Endilgados</button>
+    <button class="navbtn" data-tab="dictaminacion">3. Dictamen y Resolución</button>
+    <div class="section-title">SALIDAS</div>
+    <button class="navbtn" data-tab="salida-resolucion">→ Resolución</button>
+    <button class="navbtn" data-tab="salida-anexo">→ Anexo Resolución</button>
+    <button class="navbtn" data-tab="salida-dictamen">→ Dictamen</button>
+    <button class="navbtn" data-tab="salida-cedulas">→ Cédulas</button>
+    <div class="section-title">CONFIG.</div>
+    <button class="navbtn" data-tab="modelos">Modelos de Descargo</button>
+  </nav>
+
+  <main>
+
+  <!-- ============ TAB 1: EXPEDIENTE ============ -->
+  <div class="tab active" id="tab-expediente">
+    <h2>1. Datos del Acta de Comprobación</h2>
+    <p class="subtitle">Cargá los datos generales del expediente y del procedimiento de control.</p>
+
+    <div class="panel">
+      <h3>Identificación del Expediente</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="tag-required">N° Expediente Principal</label>
+          <input type="text" data-field="exp_numero" placeholder="P-003521/24-ATPF">
+        </div>
+        <div>
+          <label class="tag-required">Carátula (apellido/razón social principal)</label>
+          <input type="text" data-field="exp_caratula_principal" placeholder="DIXTER S.A.">
+          <small class="hint">Nombre que figura al final de la carátula</small>
+        </div>
+        <div>
+          <label class="tag-required">Tipo de mercadería</label>
+          <input type="text" data-field="exp_mercaderia" placeholder="PAQUETERÍA" value="PAQUETERÍA">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Datos del Acta de Comprobación</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="tag-required">Fojas del Acta</label>
+          <input type="text" data-field="acta_fojas" placeholder="01/13">
+        </div>
+        <div>
+          <label class="tag-required">Fecha del Acta</label>
+          <input type="text" data-field="acta_fecha" placeholder="10 de Junio de 2024">
+          <small class="hint">Formato literal: "10 de Junio de 2024"</small>
+        </div>
+        <div>
+          <label class="tag-required">Hora</label>
+          <input type="text" data-field="acta_hora" placeholder="06:00 hs.">
+        </div>
+        <div>
+          <label class="tag-required">Puesto de Control</label>
+          <input type="text" data-field="acta_puesto" placeholder="Lucio V. Mansilla" value="Lucio V. Mansilla">
+        </div>
+        <div>
+          <label class="tag-required">Ruta y Km</label>
+          <input type="text" data-field="acta_ruta" placeholder="Ruta Nacional Nº 11, km. 1.103" value="Ruta Nacional Nº 11, km. 1.103">
+        </div>
+        <div>
+          <label>Provincia</label>
+          <input type="text" data-field="acta_provincia" value="Formosa">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Datos del Transporte</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="tag-required">Empresa de transporte (razón social)</label>
+          <input type="text" data-field="trans_empresa" placeholder="HIJOS DE ROBERTO CANCIO DEMONTE S.A.">
+        </div>
+        <div>
+          <label class="tag-required">CUIT empresa transporte</label>
+          <input type="text" data-field="trans_cuit" placeholder="33-57808923-9">
+        </div>
+        <div>
+          <label class="tag-required">Domicilio empresa transporte</label>
+          <input type="text" data-field="trans_domicilio" placeholder="Ruta 12 Km. 1026 de la ciudad de Corrientes, provincia homónima">
+        </div>
+        <div>
+          <label class="tag-required">Camión (marca/modelo)</label>
+          <input type="text" data-field="trans_camion" placeholder="Scania, Modelo: R114GA">
+        </div>
+        <div>
+          <label class="tag-required">Dominio</label>
+          <input type="text" data-field="trans_dominio" placeholder="FMM3.87">
+        </div>
+        <div>
+          <label>Dominio acoplado/semirremolque</label>
+          <input type="text" data-field="trans_dominio_aco" placeholder="AA263TE">
+        </div>
+        <div>
+          <label class="tag-required">Chofer (nombre completo)</label>
+          <input type="text" data-field="trans_chofer" placeholder="CARLOS FABIAN OJEDA">
+        </div>
+        <div>
+          <label class="tag-required">DNI Chofer</label>
+          <input type="text" data-field="trans_chofer_dni" placeholder="29.529.733">
+        </div>
+        <div>
+          <label class="tag-required">Origen de carga</label>
+          <input type="text" data-field="trans_origen" placeholder="Provincia de Buenos Aires">
+        </div>
+        <div>
+          <label class="tag-required">Destino</label>
+          <input type="text" data-field="trans_destino" placeholder="Ciudad de Formosa, provincia homónima">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Datos de la Sanción (UT y Multa)</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="tag-required">Cantidad de UT</label>
+          <input type="number" data-field="ut_cantidad" value="500" oninput="recalcMulta()">
+        </div>
+        <div>
+          <label class="tag-required">Valor UT a la fecha del acta ($)</label>
+          <input type="number" data-field="ut_valor" placeholder="600" oninput="recalcMulta()">
+          <small class="hint">Valor unitario al momento de cometida la infracción</small>
+        </div>
+        <div>
+          <label>Monto multa calculado ($)</label>
+          <input type="text" data-field="ut_multa" readonly style="background:#f0ece0;font-weight:600">
+        </div>
+        <div style="grid-column:span 3">
+          <label>Monto multa en letras</label>
+          <input type="text" data-field="ut_multa_letras" placeholder="TRESCIENTOS MIL">
+          <small class="hint">Ej: TRESCIENTOS MIL · QUINIENTOS MIL · UN MILLÓN. Se autocompletará si es valor común.</small>
+        </div>
+        <div>
+          <label>Valor UT en letras</label>
+          <input type="text" data-field="ut_valor_letras" placeholder="SEISCIENTOS">
+          <small class="hint">Ej: SEISCIENTOS · MIL · DOS MIL</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 2: ENDILGADOS ============ -->
+  <div class="tab" id="tab-endilgados">
+    <h2>2. Remitentes / Endilgados</h2>
+    <p class="subtitle">Cargá cada remitente con su remito, datos de notificación y tipo de descargo presentado.</p>
+
+    <div class="alert alert-info">
+      💡 <strong>Tip:</strong> Podés pegar varios datos desde un Excel/planilla. Para ello usá el botón <strong>Pegar masivo</strong> y seguí el formato indicado.
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" onclick="agregarEndilgado()">+ Agregar remitente</button>
+      <button class="btn btn-sec" onclick="abrirPegadoMasivo()">📋 Pegar masivo (desde Excel)</button>
+      <div class="grow"></div>
+      <span id="contador-endilgados" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+    <div style="overflow-x:auto">
+    <table id="tabla-endilgados">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th style="min-width:200px">Razón Social / Nombre</th>
+          <th style="min-width:130px">CUIT</th>
+          <th style="min-width:200px">Domicilio Fiscal</th>
+          <th style="min-width:110px">Tipo Remito</th>
+          <th style="min-width:140px">N° Remito</th>
+          <th style="min-width:110px">Fecha Remito</th>
+          <th style="min-width:140px">Fojas Cédula</th>
+          <th style="min-width:130px">Modal. Notif.</th>
+          <th style="min-width:200px">Email / Acuse</th>
+          <th style="min-width:110px">Fecha Notif.</th>
+          <th style="min-width:90px">Fojas Const.</th>
+          <th style="min-width:180px">Tipo Descargo</th>
+          <th style="min-width:90px">Fojas Desc.</th>
+          <th style="min-width:140px">Expte. Descargo</th>
+          <th style="min-width:140px">Repres. Legal</th>
+          <th style="min-width:90px">DNI Repres.</th>
+          <th style="min-width:60px">Acc.</th>
+        </tr>
+      </thead>
+      <tbody id="endilgados-body"></tbody>
+    </table>
+    </div>
+
+    <div id="pegado-masivo-panel" class="panel" style="display:none;margin-top:16px">
+      <h3>Pegado masivo desde planilla</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Pegá filas separadas por TAB (como las copiás de Excel). Columnas en este orden:<br>
+      <span class="kbd">Razón Social</span> <span class="kbd">CUIT</span> <span class="kbd">Domicilio</span> <span class="kbd">Tipo Remito</span> <span class="kbd">N° Remito</span> <span class="kbd">Fecha Remito</span></p>
+      <textarea id="pegado-textarea" rows="6" placeholder="DETODONET S.A.&#9;30-71699337-6&#9;CABA&#9;R&#9;00002-00014029&#9;05/06/2024&#10;DIESEL FRENOS S.R.L.&#9;30-58446212-0&#9;CABA&#9;R&#9;00012-00013347&#9;07/06/2024"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" onclick="procesarPegadoMasivo()">Procesar</button>
+        <button class="btn btn-sec" onclick="document.getElementById('pegado-masivo-panel').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAB 3: DICTAMEN Y RESOLUCION ============ -->
+  <div class="tab" id="tab-dictaminacion">
+    <h2>3. Datos para Dictamen y Resolución</h2>
+    <p class="subtitle">Datos finales de los actos administrativos a emitir.</p>
+
+    <div class="panel">
+      <h3>Dictamen Jurídico</h3>
+      <div class="grid grid-3">
+        <div>
+          <label class="tag-required">N° Dictamen</label>
+          <input type="text" data-field="dict_numero" placeholder="123/2026-DPIF">
+        </div>
+        <div>
+          <label class="tag-required">Fecha Dictamen</label>
+          <input type="text" data-field="dict_fecha" placeholder="24 de Abril de 2026">
+        </div>
+        <div>
+          <label>Director Jurídica y Técnica</label>
+          <input type="text" data-field="dict_director" placeholder="JOSE JAVIER MOBILIO" value="JOSE JAVIER MOBILIO">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Datos de Notificaciones generales (cronología)</h3>
+      <div class="grid grid-2">
+        <div>
+          <label>Fojas providencia que dispone notificar</label>
+          <input type="text" data-field="prov_fojas" placeholder="29">
+        </div>
+        <div>
+          <label>Fecha providencia</label>
+          <input type="text" data-field="prov_fecha" placeholder="16/05/2025">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Resolución Interna</h3>
+      <div class="grid grid-2">
+        <div>
+          <label>N° Resolución Interna (puede dejarse en blanco)</label>
+          <input type="text" data-field="res_numero" placeholder="_______ /">
+        </div>
+        <div>
+          <label>Fecha Resolución</label>
+          <input type="text" data-field="res_fecha" placeholder="se completa al firmar">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODELOS DE DESCARGO ============ -->
+  <div class="tab" id="tab-modelos">
+    <h2>Modelos de Respuesta a Descargos</h2>
+    <p class="subtitle">Estos son los 8 modelos oficiales identificados (incluido "no presentó descargo"), con el texto exacto provisto por el área. Podés editarlos. Los cambios se guardan en el navegador.</p>
+
+    <div class="alert alert-info">
+      💡 Cada modelo se inserta automáticamente en la Resolución y en el Dictamen cuando elegís ese tipo en la columna <strong>Tipo Descargo</strong> del remitente. Usá <code>{{razon_social}}</code>, <code>{{cuit}}</code>, <code>{{fojas_descargo}}</code> como variables.
+    </div>
+
+    <div id="modelos-container"></div>
+    <button class="btn btn-sec" onclick="resetModelos()" style="margin-top:10px">↻ Restaurar modelos por defecto</button>
+  </div>
+
+  <!-- ============ SALIDAS ============ -->
+  <div class="tab" id="tab-salida-resolucion">
+    <h2>Resolución (texto plano)</h2>
+    <p class="subtitle">Copiar y pegar en Word. Usa el formato del modelo.</p>
+    <div class="export-buttons">
+      <button class="btn" onclick="generarResolucion()">⚙️ Regenerar Resolución</button>
+      <button class="btn btn-sec" onclick="copiarTexto('out-resolucion','btn-copy-res')" id="btn-copy-res">📋 Copiar al portapapeles</button>
+      <button class="btn btn-sec" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="output-area">
+      <div class="output-header"><h4>RESOLUCIÓN</h4><span style="font-size:11px;opacity:.7">Listo para pegar en Word</span></div>
+      <div class="output-content" id="out-resolucion">Presioná "Regenerar Resolución" para generar el texto.</div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-salida-anexo">
+    <h2>Anexo de la Resolución</h2>
+    <p class="subtitle">Planilla de remitentes con datos de notificación y monto de multa.</p>
+    <div class="export-buttons">
+      <button class="btn" onclick="generarAnexo()">⚙️ Regenerar Anexo</button>
+      <button class="btn btn-sec" onclick="copiarTexto('out-anexo','btn-copy-anx')" id="btn-copy-anx">📋 Copiar texto</button>
+      <button class="btn btn-sec" onclick="copiarTablaAnexo()">📋 Copiar como tabla (para Excel/Word)</button>
+    </div>
+    <div class="output-area">
+      <div class="output-header"><h4>ANEXO</h4></div>
+      <div class="output-content" id="out-anexo">Presioná "Regenerar Anexo".</div>
+    </div>
+    <div class="output-area" style="margin-top:14px">
+      <div class="output-header"><h4>Vista previa tabla</h4></div>
+      <div class="output-content markdown" id="out-anexo-tabla" style="padding:12px"></div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-salida-dictamen">
+    <h2>Dictamen Jurídico</h2>
+    <p class="subtitle">Documento dirigido al Director de Jurídica y Técnica.</p>
+    <div class="export-buttons">
+      <button class="btn" onclick="generarDictamen()">⚙️ Regenerar Dictamen</button>
+      <button class="btn btn-sec" onclick="copiarTexto('out-dictamen','btn-copy-dic')" id="btn-copy-dic">📋 Copiar al portapapeles</button>
+    </div>
+    <div class="output-area">
+      <div class="output-header"><h4>DICTAMEN</h4></div>
+      <div class="output-content" id="out-dictamen">Presioná "Regenerar Dictamen".</div>
+    </div>
+  </div>
+
+  <div class="tab" id="tab-salida-cedulas">
+    <h2>Cédulas de Notificación</h2>
+    <p class="subtitle">Una cédula por cada remitente. Listas para copiar y pegar.</p>
+    <div class="export-buttons">
+      <button class="btn" onclick="generarCedulas()">⚙️ Regenerar Cédulas</button>
+      <button class="btn btn-sec" onclick="copiarTexto('out-cedulas','btn-copy-ced')" id="btn-copy-ced">📋 Copiar TODAS las cédulas</button>
+    </div>
+    <div id="cedulas-individuales"></div>
+    <div class="output-area" style="margin-top:14px">
+      <div class="output-header"><h4>TODAS LAS CÉDULAS (texto unificado)</h4></div>
+      <div class="output-content" id="out-cedulas">Presioná "Regenerar Cédulas".</div>
+    </div>
+  </div>
+
+  </main>
+</div>
+
+<script>
+// =================================================================
+// ESTADO
+// =================================================================
+const STORAGE_KEY = 'sistema_atp_v1';
+let state = {
+  expediente: {},
+  endilgados: [],
+  modelos: null
+};
+
+// =================================================================
+// MODELOS DE DESCARGO POR DEFECTO
+// =================================================================
+const MODELOS_DEFAULT = [
+  {
+    id: 'no_presento',
+    nombre: 'No presentó descargo',
+    descripcion: 'Endilgado debidamente notificado pero sin presentación.',
+    para_resolucion: '',
+    para_dictamen: ''
+  },
+  {
+    id: 'm1_presento_factura_recien_descargo',
+    nombre: 'M1 - Presentó la factura recién en instancia del descargo',
+    descripcion: 'El infractor presenta la factura adjunta al escrito de descargo, alegando que ya estaba emitida.',
+    para_resolucion: 'Que, los argumentos desarrollados por la firma {{razon_social}}, CUIT N° {{cuit}}, responsable de la emisión de la documentación con la cual ingresaron los bienes hacia la jurisdicción provincial, no logran desvirtuar las infracciones endilgadas a su respecto. En su descargo obrante a fs. {{fojas_descargo}}, el infractor considera que no ha incumplido los deberes a su cargo, presentando en dicha oportunidad la Factura que respaldaría la operación, sin embargo, la normativa fiscal no solo exige la emisión sino también la entrega al transportista para su exhibición en el Puesto de Control a los efectos de su debida registración y, en el caso bajo estudio, quedó acreditado que los bienes eran trasladados sin factura. En efecto, la firma remitente, como persona dedicada al comercio, está obligada a cumplir con una serie de deberes formales tributarios que rigen el ejercicio de su actividad y en este sentido, la reglamentación dispone que quién remite bienes y/o productos a la Provincia de Formosa, debe cumplir con la carga de entregar al transportista la Factura que respalde la operación de compraventa cuyo traslado encomienda, la cual debe ser emitida previamente al inicio del traslado y acompañar hasta su destino. (Artículo 27° de la Resolución General N° 1415/2003 a la cual esta Administración Tributaria se halla adherida por Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020 DGR);',
+    para_dictamen: 'Los argumentos desarrollados por la firma {{razon_social}}, CUIT N° {{cuit}}, responsable de la emisión de la documentación con la cual ingresaron los bienes hacia la jurisdicción provincial, no logran desvirtuar las infracciones endilgadas a su respecto. En su descargo obrante a fs. {{fojas_descargo}}, el infractor considera que no ha incumplido los deberes a su cargo, presentando en dicha oportunidad la Factura que respaldaría la operación, sin embargo, la normativa fiscal no solo exige la emisión sino también la entrega al transportista para su exhibición en el Puesto de Control a los efectos de su debida registración y, en el caso bajo estudio, quedó acreditado que los bienes eran trasladados sin factura. En efecto, la firma remitente, como persona dedicada al comercio, está obligada a cumplir con una serie de deberes formales tributarios que rigen el ejercicio de su actividad y en este sentido, la reglamentación dispone que quién remite bienes y/o productos a la Provincia de Formosa, debe cumplir con la carga de entregar al transportista la Factura que respalde la operación de compraventa cuyo traslado encomienda, la cual debe ser emitida previamente al inicio del traslado y acompañar hasta su destino (Artículo 27° de la Resolución General N° 1415/2003 a la cual esta Administración Tributaria se halla adherida por Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020 DGR).'
+  },
+  {
+    id: 'm2_remito_suficiente',
+    nombre: 'M2 - Considera que el remito es suficiente',
+    descripcion: 'El descargo sostiene que el remito por sí solo respalda el traslado.',
+    para_resolucion: 'Que, en cuanto a la defensa ensayada por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, basada en la supuesta suficiencia del remito como único respaldo documental del traslado, corresponde señalar que el remito no acredita por sí mismo la existencia de una operación de compraventa, sino únicamente el traslado físico de los bienes, resultando insuficiente para cumplir con las exigencias establecidas por la Resolución General N° 26/2020-DGR, la cual dispone expresamente que el ingreso de mercaderías a esta jurisdicción por operaciones de compraventa, permuta o dación en pago debe estar documentado con la factura o tique factura correspondiente, además del remito o guía, según corresponda;\n\nQue, en efecto, quien remite bienes y/o productos a la Provincia de Formosa, en su carácter de sujeto que ejerce una actividad comercial, se encuentra obligado al cumplimiento de los deberes formales tributarios, entre los cuales se encuentra la carga de entregar al transportista la factura que respalde la operación de compraventa, la cual debe ser emitida con anterioridad al inicio del traslado y acompañar la mercadería hasta su destino, conforme lo dispuesto por el artículo 27° de la Resolución General N° 1415/2003, a la cual esta Administración Tributaria se encuentra adherida mediante Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020-DGR;',
+    para_dictamen: 'En cuanto a la defensa ensayada por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, basada en la supuesta suficiencia del remito como único respaldo documental del traslado, corresponde señalar que el remito no acredita por sí mismo la existencia de una operación de compraventa, sino únicamente el traslado físico de los bienes, resultando insuficiente para cumplir con las exigencias establecidas por la Resolución General N° 26/2020-DGR, la cual dispone expresamente que el ingreso de mercaderías a esta jurisdicción por operaciones de compraventa, permuta o dación en pago debe estar documentado con la factura o tique factura correspondiente, además del remito o guía, según corresponda.\n\nEn efecto, quien remite bienes y/o productos a la Provincia de Formosa, en su carácter de sujeto que ejerce una actividad comercial, se encuentra obligado al cumplimiento de los deberes formales tributarios, entre los cuales se encuentra la carga de entregar al transportista la factura que respalde la operación de compraventa, la cual debe ser emitida con anterioridad al inicio del traslado y acompañar la mercadería hasta su destino, conforme lo dispuesto por el artículo 27° de la Resolución General N° 1415/2003, a la cual esta Administración Tributaria se encuentra adherida mediante Resolución General N° 32/2019 DGR, modificada en su parte pertinente por la Resolución General N° 26/2020-DGR.'
+  },
+  {
+    id: 'm3_remito_R_comprobante_equivalente',
+    nombre: 'M3 - Sostiene que el remito tipo "R" es comprobante equivalente válido',
+    descripcion: 'Aduce que el remito tipo R alcanza como comprobante equivalente conforme la RG 1415/2003.',
+    para_resolucion: 'Que, en cuanto al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que el presentante sostiene que la mercadería transportada se encontraba debidamente documentada mediante un remito tipo "R", al que atribuye carácter de comprobante equivalente válido conforme a la Resolución General N° 1415/2003 (ARCA – ex AFIP), entendiendo que ello resultaría suficiente para excluir la configuración de la infracción prevista en el artículo 42° del Código Fiscal;\n\nQue, sin embargo, tal planteo no resulta atendible, puesto que conforme surge del Acta de Comprobación labrada en autos, la mercadería era trasladada sin la correspondiente factura que respalde la operación comercial, habiéndose exhibido únicamente un remito tipo "R", circunstancia que se encuentra debidamente consignada en el instrumento, el cual goza de presunción de legitimidad y autenticidad;\n\nQue, en este sentido, si bien la normativa nacional (Resolución General N° 1415/2003-AFIP) admite la utilización de remitos como documentos que acompañan el traslado de bienes, ello no releva al sujeto obligado de emitir la factura correspondiente con anterioridad al inicio del traslado hacia la jurisdicción provincial, ni de asegurar su efectiva entrega al transportista para su exhibición en el puesto de control;\n\nQue, en particular, la Resolución General N° 26/2020-DGR, establece que la factura debe emitirse previamente al traslado y acompañar la mercadería hasta su destino, constituyendo un requisito esencial para respaldar la operación de compraventa;\n\nQue, por lo tanto, el remito no sustituye a la factura en cuanto comprobante fiscal de la operación, sino que cumple una función complementaria vinculada al traslado físico de los bienes, razón por la cual su sola exhibición no resulta suficiente para acreditar el debido cumplimiento de las obligaciones fiscales exigidas por la normativa vigente;',
+    para_dictamen: 'En cuanto al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que el presentante sostiene que la mercadería transportada se encontraba debidamente documentada mediante un remito tipo "R", al que atribuye carácter de comprobante equivalente válido conforme a la Resolución General N° 1415/2003 (ARCA – ex AFIP), entendiendo que ello resultaría suficiente para excluir la configuración de la infracción prevista en el artículo 42° del Código Fiscal.\n\nSin embargo, tal planteo no resulta atendible, puesto que conforme surge del Acta de Comprobación labrada en autos, la mercadería era trasladada sin la correspondiente factura que respalde la operación comercial, habiéndose exhibido únicamente un remito tipo "R", circunstancia que se encuentra debidamente consignada en el instrumento, el cual goza de presunción de legitimidad y autenticidad.\n\nEn este sentido, si bien la normativa nacional (Resolución General N° 1415/2003-AFIP) admite la utilización de remitos como documentos que acompañan el traslado de bienes, ello no releva al sujeto obligado de emitir la factura correspondiente con anterioridad al inicio del traslado hacia la jurisdicción provincial, ni de asegurar su efectiva entrega al transportista para su exhibición en el puesto de control.\n\nEn particular, la Resolución General N° 26/2020-DGR, establece que la factura debe emitirse previamente al traslado y acompañar la mercadería hasta su destino, constituyendo un requisito esencial para respaldar la operación de compraventa.\n\nPor lo tanto, el remito no sustituye a la factura en cuanto comprobante fiscal de la operación, sino que cumple una función complementaria vinculada al traslado físico de los bienes, razón por la cual su sola exhibición no resulta suficiente para acreditar el debido cumplimiento de las obligaciones fiscales exigidas por la normativa vigente.'
+  },
+  {
+    id: 'm4_transporte_a_cargo_comprador',
+    nombre: 'M4 - Transporte a cargo del comprador / tercero no dependiente',
+    descripcion: 'El remitente alega que el transporte estaba a cargo del comprador o de un tercero ajeno.',
+    para_resolucion: 'Que, en relación a lo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, respecto a que el transporte de la mercadería se encontraba a cargo del comprador y era realizado por un tercero no dependiente de su representada, corresponde señalar que dicha circunstancia no exime ni atenúa la responsabilidad del remitente, toda vez que la normativa fiscal vigente no condiciona la obligación de documentar el traslado de mercaderías a la existencia de una relación de dependencia con el transportista, sino que impone al sujeto que remite los bienes la carga de emitir y entregar la factura que respalde la operación de compraventa, asegurando que la misma acompañe la mercadería durante todo el trayecto hasta su destino final;\n\nQue, en tal sentido, la Resolución General N° 26/2020-DGR establece de manera expresa que el ingreso de mercaderías a la Provincia de Formosa, de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá encontrarse documentado con la factura o tique factura, además del remito o guía que corresponda, todos ellos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 de AFIP y sus modificatorias, a la cual este Organismo se encuentra adherido por Resolución General N° 32/2019-DGR; obligación que resulta exigible con independencia de quién asuma el costo u organización del transporte, debiendo dicha documentación acompañar la mercadería y ser exhibida por el transportista al momento del control, resultando irrelevante que el traslado sea efectuado por un tercero ajeno a la estructura del remitente;',
+    para_dictamen: 'En relación a lo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, respecto a que el transporte de la mercadería se encontraba a cargo del comprador y era realizado por un tercero no dependiente de su representada, corresponde señalar que dicha circunstancia no exime ni atenúa la responsabilidad del remitente, toda vez que la normativa fiscal vigente no condiciona la obligación de documentar el traslado de mercaderías a la existencia de una relación de dependencia con el transportista, sino que impone al sujeto que remite los bienes la carga de emitir y entregar la factura que respalde la operación de compraventa, asegurando que la misma acompañe la mercadería durante todo el trayecto hasta su destino final.\n\nEn tal sentido, la Resolución General N° 26/2020-DGR establece de manera expresa que el ingreso de mercaderías a la Provincia de Formosa, de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá encontrarse documentado con la factura o tique factura, además del remito o guía que corresponda, todos ellos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 de AFIP y sus modificatorias, a la cual este Organismo se encuentra adherido por Resolución General N° 32/2019-DGR; obligación que resulta exigible con independencia de quién asuma el costo u organización del transporte, debiendo dicha documentación acompañar la mercadería y ser exhibida por el transportista al momento del control, resultando irrelevante que el traslado sea efectuado por un tercero ajeno a la estructura del remitente.'
+  },
+  {
+    id: 'm5_factura_entregada_al_transportista',
+    nombre: 'M5 - Sostiene que la factura fue entregada al transportista',
+    descripcion: 'Atribuye al transportista la responsabilidad por la falta de exhibición.',
+    para_resolucion: 'Que, a este respecto, corresponde indicar que, en relación a lo manifestado por {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, en cuanto sostiene que la mercadería transportada contaba con facturación y documentación respaldatoria emitida con anterioridad al traslado, y que la eventual omisión en su exhibición sería atribuible al transportista, corresponde rechazar tales argumentos por resultar incompatibles con las constancias objetivas del procedimiento;\n\nQue, en efecto, conforme surge del Acta de Comprobación labrada en autos, la única documentación exhibida al momento del control por el conductor de la unidad fue el remito acompañado, no habiéndose presentado facturas ni otra documentación fiscal que respalde la totalidad de la mercadería transportada, en los términos exigidos por la normativa vigente;\n\nQue, asimismo, cabe destacar que el Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no registra la exhibición de las facturas que ahora se invocan en el descargo, ni manifestación alguna por parte del conductor en tal sentido, pese a habérsele otorgado la posibilidad de efectuar aclaraciones o agregar documentación al momento de la suscripción del Acta, conforme lo establece el artículo 45° del Código Fiscal;\n\nQue, en este sentido, el argumento relativo a que la mercadería habría sido facturada con anterioridad y que la responsabilidad recaería exclusivamente en el transportista, no resulta atendible, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías y asegurar la efectiva disponibilidad de dicha documentación al momento del control constituye un deber inherente a la operatoria comercial del contribuyente, cuya inobservancia configura la infracción prevista en el artículo 42° del Código Fiscal, con independencia de las relaciones contractuales entre las partes intervinientes;',
+    para_dictamen: 'A este respecto, corresponde indicar que, en relación a lo manifestado por {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, en cuanto sostiene que la mercadería transportada contaba con facturación y documentación respaldatoria emitida con anterioridad al traslado, y que la eventual omisión en su exhibición sería atribuible al transportista, corresponde rechazar tales argumentos por resultar incompatibles con las constancias objetivas del procedimiento.\n\nEn efecto, conforme surge del Acta de Comprobación labrada en autos, la única documentación exhibida al momento del control por el conductor de la unidad fue el remito acompañado, no habiéndose presentado facturas ni otra documentación fiscal que respalde la totalidad de la mercadería transportada, en los términos exigidos por la normativa vigente.\n\nAsimismo, cabe destacar que el Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no registra la exhibición de las facturas que ahora se invocan en el descargo, ni manifestación alguna por parte del conductor en tal sentido, pese a habérsele otorgado la posibilidad de efectuar aclaraciones o agregar documentación al momento de la suscripción del Acta, conforme lo establece el artículo 45° del Código Fiscal.\n\nEn este sentido, el argumento relativo a que la mercadería habría sido facturada con anterioridad y que la responsabilidad recaería exclusivamente en el transportista, no resulta atendible, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías y asegurar la efectiva disponibilidad de dicha documentación al momento del control constituye un deber inherente a la operatoria comercial del contribuyente, cuya inobservancia configura la infracción prevista en el artículo 42° del Código Fiscal, con independencia de las relaciones contractuales entre las partes intervinientes.'
+  },
+  {
+    id: 'm6_colision_normativa_federal_provincial',
+    nombre: 'M6 - Argumentan colisión normativa federal vs provincial (RG 1415 vs RG 26/2020)',
+    descripcion: 'Sostiene que la RG 26/2020-DGR colisiona con la RG 1415/2003-AFIP.',
+    para_resolucion: 'Que, en relación al descargo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, relativo a la supuesta colisión entre la normativa federal (Resolución General N° 1415/2003 – AFIP) y la normativa provincial (Resolución General N° 26/2020-DGR), corresponde señalar que el mismo carece de sustento jurídico, en tanto no se verifica incompatibilidad alguna sino una adecuada articulación normativa en el marco del sistema federal de potestades tributarias;\n\nQue, en efecto, conforme lo dispuesto por el artículo 7° del Código Fiscal – Ley N° 1589, esta Administración Tributaria se encuentra expresamente facultada para dictar normas generales obligatorias en cuanto a la forma, modo y condiciones en que deben cumplirse los deberes formales, pudiendo exigir la exhibición de documentación y comprobantes vinculados a hechos imponibles, así como también disponer que todo traslado o transporte de mercaderías que tenga origen o destino en la jurisdicción provincial se encuentre debidamente amparado por la documentación exigida por la normativa tributaria;\n\nQue, en este sentido, la Resolución General N° 26/2020-DGR ha sido dictada en ejercicio legítimo de dichas facultades reglamentarias, estableciendo una exigencia específica vinculada a una instancia concreta de fiscalización —esto es, el ingreso de mercaderías a la Provincia de Formosa—, consistente en la obligación de contar con la factura o tique factura, además de la documentación de traslado, cuando se trate de operaciones de compraventa;\n\nQue, lejos de contradecir la normativa federal, dicha exigencia se encuentra en plena consonancia con la Resolución General N° 1415/2003-AFIP —a la cual esta jurisdicción se encuentra adherida mediante Resolución General N° 32/2019-DGR—, en tanto esta última regula el régimen de emisión de comprobantes, mientras que la normativa provincial establece condiciones adicionales de verificación y control en el ámbito de su competencia territorial;\n\nQue, en consecuencia, no resulta jurídicamente admisible sostener que la adhesión al régimen nacional implique una limitación a las facultades de control local, toda vez que la Provincia conserva intactas sus potestades de fiscalización, verificación y percepción de los tributos, pudiendo válidamente exigir la exhibición de la documentación respaldatoria en las oportunidades que estime pertinentes;\n\nQue, por otra parte, la medida adoptada por esta Administración encuentra fundamento en razones de política fiscal debidamente explicitadas en los considerandos de la Resolución General N° 26/2020-DGR, vinculadas a la necesidad de fortalecer los mecanismos de control frente a elevados índices de evasión detectados en determinados sectores, optimizar las tareas de fiscalización en razón de la ubicación geográfica de la provincia y garantizar la trazabilidad de las operaciones comerciales;\n\nQue, en este contexto, la exigencia de contar con la factura al momento del ingreso de mercaderías a la jurisdicción no constituye una carga irrazonable ni desproporcionada, sino una herramienta legítima y necesaria para asegurar el cumplimiento de las obligaciones fiscales y prevenir maniobras evasivas;',
+    para_dictamen: 'En relación al descargo planteado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, relativo a la supuesta colisión entre la normativa federal (Resolución General N° 1415/2003 – AFIP) y la normativa provincial (Resolución General N° 26/2020-DGR), corresponde señalar que el mismo carece de sustento jurídico, en tanto no se verifica incompatibilidad alguna sino una adecuada articulación normativa en el marco del sistema federal de potestades tributarias.\n\nEn efecto, conforme lo dispuesto por el artículo 7° del Código Fiscal – Ley N° 1589, esta Administración Tributaria se encuentra expresamente facultada para dictar normas generales obligatorias en cuanto a la forma, modo y condiciones en que deben cumplirse los deberes formales, pudiendo exigir la exhibición de documentación y comprobantes vinculados a hechos imponibles, así como también disponer que todo traslado o transporte de mercaderías que tenga origen o destino en la jurisdicción provincial se encuentre debidamente amparado por la documentación exigida por la normativa tributaria.\n\nEn este sentido, la Resolución General N° 26/2020-DGR ha sido dictada en ejercicio legítimo de dichas facultades reglamentarias, estableciendo una exigencia específica vinculada a una instancia concreta de fiscalización —esto es, el ingreso de mercaderías a la Provincia de Formosa—, consistente en la obligación de contar con la factura o tique factura, además de la documentación de traslado, cuando se trate de operaciones de compraventa.\n\nLejos de contradecir la normativa federal, dicha exigencia se encuentra en plena consonancia con la Resolución General N° 1415/2003-AFIP —a la cual esta jurisdicción se encuentra adherida mediante Resolución General N° 32/2019-DGR—, en tanto esta última regula el régimen de emisión de comprobantes, mientras que la normativa provincial establece condiciones adicionales de verificación y control en el ámbito de su competencia territorial.\n\nEn consecuencia, no resulta jurídicamente admisible sostener que la adhesión al régimen nacional implique una limitación a las facultades de control local, toda vez que la Provincia conserva intactas sus potestades de fiscalización, verificación y percepción de los tributos, pudiendo válidamente exigir la exhibición de la documentación respaldatoria en las oportunidades que estime pertinentes.\n\nPor otra parte, la medida adoptada por esta Administración encuentra fundamento en razones de política fiscal debidamente explicitadas en los considerandos de la Resolución General N° 26/2020-DGR, vinculadas a la necesidad de fortalecer los mecanismos de control frente a elevados índices de evasión detectados en determinados sectores, optimizar las tareas de fiscalización en razón de la ubicación geográfica de la provincia y garantizar la trazabilidad de las operaciones comerciales.\n\nEn este contexto, la exigencia de contar con la factura al momento del ingreso de mercaderías a la jurisdicción no constituye una carga irrazonable ni desproporcionada, sino una herramienta legítima y necesaria para asegurar el cumplimiento de las obligaciones fiscales y prevenir maniobras evasivas.'
+  },
+  {
+    id: 'm7_aduana_interior',
+    nombre: 'M7 - Plantea aduana interior (arts. 9°, 10° y 11° C.N.)',
+    descripcion: 'Sostiene que la pretensión sancionatoria implica una aduana interior inconstitucional.',
+    para_resolucion: 'Que, por último, la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, planteó que la pretensión sancionatoria de este organismo fiscal en la práctica implica el establecimiento de una suerte de aduana interior en flagrante menoscabo a los artículos 9°, 10° y 11° de la Constitución Nacional. Respecto a este punto, es dable señalar que el Artículo 1° del Código Fiscal de la provincia de Formosa – Ley N° 1.589, dispone que las obligaciones fiscales existentes o que se establezcan en la provincia de Formosa se regirán por las disposiciones de este código y por las leyes impositivas especiales que se dicten. Ello deviene del Sistema Federal que adopta la Nación Argentina como forma de gobierno, lo cual implica la delegación de facultades legislativas desarrolladas por el Congreso, resultando en todo conteste con el principio autonómico de los entes locales -provincias, CABA y municipios-, en cuanto poseen, dentro de las atribuciones reservadas para sí (Art. 121° C.N.), la potestad de establecer tributos en sus respectivas jurisdicciones. Se deriva de ello que el derecho público local se encuentra facultado no solo para establecer el modo de nacimiento de obligaciones tributarias dentro de su territorio, sino también de disponer los medios para tornarlas efectivas, definiendo sus respectivas formas de extinción. Lo contrario significaría reconocer limitaciones a la potestad impositiva de los Fiscos locales a partir de los preceptos del Código Civil y Comercial de la Nación, restringiendo de ese modo la relación jurídica tributaria entablada con los contribuyentes de su jurisdicción, propia del derecho público local;',
+    para_dictamen: 'Por último, la firma {{razon_social}}, CUIT N° {{cuit}}, en su descargo obrante a fs. {{fojas_descargo}}, planteó que la pretensión sancionatoria de este organismo fiscal en la práctica implica el establecimiento de una suerte de aduana interior en flagrante menoscabo a los artículos 9°, 10° y 11° de la Constitución Nacional. Respecto a este punto, es dable señalar que el Artículo 1° del Código Fiscal de la provincia de Formosa – Ley N° 1.589, dispone que las obligaciones fiscales existentes o que se establezcan en la provincia de Formosa se regirán por las disposiciones de este código y por las leyes impositivas especiales que se dicten. Ello deviene del Sistema Federal que adopta la Nación Argentina como forma de gobierno, lo cual implica la delegación de facultades legislativas desarrolladas por el Congreso, resultando en todo conteste con el principio autonómico de los entes locales -provincias, CABA y municipios-, en cuanto poseen, dentro de las atribuciones reservadas para sí (Art. 121° C.N.), la potestad de establecer tributos en sus respectivas jurisdicciones. Se deriva de ello que el derecho público local se encuentra facultado no solo para establecer el modo de nacimiento de obligaciones tributarias dentro de su territorio, sino también de disponer los medios para tornarlas efectivas, definiendo sus respectivas formas de extinción. Lo contrario significaría reconocer limitaciones a la potestad impositiva de los Fiscos locales a partir de los preceptos del Código Civil y Comercial de la Nación, restringiendo de ese modo la relación jurídica tributaria entablada con los contribuyentes de su jurisdicción, propia del derecho público local.'
+  },
+  {
+    id: 'm8_negativa_legitimacion_constitucional',
+    nombre: 'M8 - Negativa genérica + falta legitimación + planteos constitucionales',
+    descripcion: 'Defensa amplia: niega hechos, alega no ser legitimado pasivo, plantea inconstitucionalidad/confiscatoriedad, ofrece prueba.',
+    para_resolucion: 'Que, en relación al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que las defensas entabladas no resultan atendibles;\n\nQue, en primer término, la negativa genérica de los hechos carece de eficacia frente a las constancias del Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no habiendo sido desvirtuado mediante prueba idónea;\n\nQue, en cuanto al planteo relativo a la falta de legitimación pasiva, corresponde rechazar el mismo, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías recae tanto en el remitente como en los sujetos intervinientes en la operación, quienes deben asegurar que la documentación respaldatoria acompañe la carga durante su transporte;\n\nQue, la circunstancia de que en la unidad se transporten bienes de distintos remitentes no exime a cada uno de ellos de su responsabilidad individual respecto de la documentación de sus propias operaciones;\n\nQue, en cuanto a los planteos de inconstitucionalidad, confiscatoriedad y afectación de derechos fundamentales, los mismos resultan manifiestamente improcedentes en esta instancia administrativa, en tanto no se acredita de qué modo concreto la aplicación de la normativa vigente vulneraría tales garantías, limitándose la presentante a efectuar afirmaciones genéricas carentes de sustento fáctico y jurídico;\n\nQue, la prueba ofrecida por {{razon_social}} no resulta conducente para desvirtuar los hechos constatados, en tanto la infracción se configura en el momento del control, no siendo susceptible de subsanación mediante la producción probatoria posterior;',
+    para_dictamen: 'En relación al descargo formulado por la firma {{razon_social}}, CUIT N° {{cuit}}, a fs. {{fojas_descargo}}, corresponde señalar que las defensas entabladas no resultan atendibles.\n\nEn primer término, la negativa genérica de los hechos carece de eficacia frente a las constancias del Acta de Comprobación, instrumento público que goza de presunción de legitimidad y autenticidad, no habiendo sido desvirtuado mediante prueba idónea.\n\nEn cuanto al planteo relativo a la falta de legitimación pasiva, corresponde rechazar el mismo, toda vez que la obligación de documentar adecuadamente el traslado de mercaderías recae tanto en el remitente como en los sujetos intervinientes en la operación, quienes deben asegurar que la documentación respaldatoria acompañe la carga durante su transporte.\n\nLa circunstancia de que en la unidad se transporten bienes de distintos remitentes no exime a cada uno de ellos de su responsabilidad individual respecto de la documentación de sus propias operaciones.\n\nEn cuanto a los planteos de inconstitucionalidad, confiscatoriedad y afectación de derechos fundamentales, los mismos resultan manifiestamente improcedentes en esta instancia administrativa, en tanto no se acredita de qué modo concreto la aplicación de la normativa vigente vulneraría tales garantías, limitándose la presentante a efectuar afirmaciones genéricas carentes de sustento fáctico y jurídico.\n\nLa prueba ofrecida por {{razon_social}} no resulta conducente para desvirtuar los hechos constatados, en tanto la infracción se configura en el momento del control, no siendo susceptible de subsanación mediante la producción probatoria posterior.'
+  }
+];
+
+// =================================================================
+// PERSISTENCIA
+// =================================================================
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ console.error('Error guardando',e); }
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){ console.error(e); }
+  if(!state.expediente) state.expediente = {};
+  if(!state.endilgados) state.endilgados = [];
+  if(!state.modelos) state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+
+  // Migración: si el usuario tiene modelos viejos (versión 1, prefijo "tipo"), los reemplaza por los oficiales
+  const tieneModelosViejos = state.modelos.some(m => m.id && m.id.startsWith('tipo'));
+  if(tieneModelosViejos){
+    // mapear IDs viejos a nuevos lo mejor posible
+    const mapeo = {
+      'tipo1_factura_no_acompano': 'm1_presento_factura_recien_descargo',
+      'tipo2_acompana_factura_remito': 'm1_presento_factura_recien_descargo',
+      'tipo3_reconocimiento_error': 'm1_presento_factura_recien_descargo',
+      'tipo4_factura_revisada_inspectores': 'm5_factura_entregada_al_transportista',
+      'tipo5_negativa_legitimacion_constitucional': 'm8_negativa_legitimacion_constitucional'
+    };
+    state.endilgados.forEach(en=>{
+      if(en.tipo_descargo && mapeo[en.tipo_descargo]){
+        en.tipo_descargo = mapeo[en.tipo_descargo];
+      }
+    });
+    state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+    saveState();
+    console.log('Modelos actualizados a la versión oficial.');
+  }
+}
+
+// =================================================================
+// NAVEGACION TABS
+// =================================================================
+document.querySelectorAll('.navbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// =================================================================
+// CAMPOS DEL EXPEDIENTE
+// =================================================================
+function initFields(){
+  document.querySelectorAll('[data-field]').forEach(input=>{
+    const key = input.dataset.field;
+    if(state.expediente[key] !== undefined) input.value = state.expediente[key];
+    input.addEventListener('input',()=>{
+      state.expediente[key] = input.value;
+      saveState();
+      if(key==='ut_cantidad' || key==='ut_valor') recalcMulta();
+    });
+  });
+  recalcMulta();
+}
+
+function recalcMulta(){
+  const cant = parseFloat(state.expediente.ut_cantidad)||0;
+  const val = parseFloat(state.expediente.ut_valor)||0;
+  const total = cant*val;
+  state.expediente.ut_multa = total;
+  const inp = document.querySelector('[data-field="ut_multa"]');
+  if(inp){
+    inp.value = total ? '$ '+total.toLocaleString('es-AR') : '';
+  }
+  saveState();
+}
+
+// =================================================================
+// ENDILGADOS - TABLA
+// =================================================================
+const TIPO_REMITO_OPCIONES = ['R','X','E','Otro'];
+const MODAL_NOTIF_OPCIONES = ['Buzón Fiscal Electrónico','Correo postal','Pendiente de notificación'];
+
+function renderEndilgados(){
+  const tbody = document.getElementById('endilgados-body');
+  tbody.innerHTML = '';
+  state.endilgados.forEach((e,idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="razon_social" value="${escapeAttr(e.razon_social||'')}" placeholder="Razón Social"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="cuit" value="${escapeAttr(e.cuit||'')}" placeholder="30-XXXXXXXX-X"></td>
+      <td><textarea data-eidx="${idx}" data-ekey="domicilio" rows="2" placeholder="Calle N°, Ciudad, Provincia">${escapeAttr(e.domicilio||'')}</textarea></td>
+      <td><select data-eidx="${idx}" data-ekey="tipo_remito">
+        ${TIPO_REMITO_OPCIONES.map(o=>`<option ${e.tipo_remito===o?'selected':''}>${o}</option>`).join('')}
+      </select></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="num_remito" value="${escapeAttr(e.num_remito||'')}" placeholder="0001-00012345"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="fecha_remito" value="${escapeAttr(e.fecha_remito||'')}" placeholder="dd/mm/aaaa"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="fojas_cedula" value="${escapeAttr(e.fojas_cedula||'')}" placeholder="ej. 31"></td>
+      <td><select data-eidx="${idx}" data-ekey="modal_notif">
+        <option value="">--</option>
+        ${MODAL_NOTIF_OPCIONES.map(o=>`<option ${e.modal_notif===o?'selected':''}>${o}</option>`).join('')}
+      </select></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="email_acuse" value="${escapeAttr(e.email_acuse||'')}" placeholder="email o N° CU"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="fecha_notif" value="${escapeAttr(e.fecha_notif||'')}" placeholder="dd/mm/aaaa"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="fojas_constancia" value="${escapeAttr(e.fojas_constancia||'')}" placeholder="ej. 32"></td>
+      <td><select data-eidx="${idx}" data-ekey="tipo_descargo">
+        ${state.modelos.map(m=>`<option value="${m.id}" ${e.tipo_descargo===m.id?'selected':''}>${m.nombre}</option>`).join('')}
+      </select></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="fojas_descargo" value="${escapeAttr(e.fojas_descargo||'')}" placeholder="47/56"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="expte_descargo" value="${escapeAttr(e.expte_descargo||'')}" placeholder="A-003670/25-ATPF"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="repres_legal" value="${escapeAttr(e.repres_legal||'')}" placeholder="Nombre y cargo"></td>
+      <td><input type="text" data-eidx="${idx}" data-ekey="repres_dni" value="${escapeAttr(e.repres_dni||'')}" placeholder="DNI"></td>
+      <td class="row-actions">
+        <button class="btn btn-sec btn-sm" onclick="moverEndilgado(${idx},-1)" title="Subir">▲</button>
+        <button class="btn btn-sec btn-sm" onclick="moverEndilgado(${idx},1)" title="Bajar">▼</button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarEndilgado(${idx})" title="Eliminar">×</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  // bind inputs
+  tbody.querySelectorAll('[data-eidx]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const idx = parseInt(inp.dataset.eidx);
+      const key = inp.dataset.ekey;
+      state.endilgados[idx][key] = inp.value;
+      saveState();
+    });
+    inp.addEventListener('change',()=>{
+      const idx = parseInt(inp.dataset.eidx);
+      const key = inp.dataset.ekey;
+      state.endilgados[idx][key] = inp.value;
+      saveState();
+    });
+  });
+  document.getElementById('contador-endilgados').textContent = state.endilgados.length+' remitente'+(state.endilgados.length!==1?'s':'')+' cargado'+(state.endilgados.length!==1?'s':'');
+}
+
+function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function agregarEndilgado(){
+  state.endilgados.push({
+    razon_social:'', cuit:'', domicilio:'', tipo_remito:'R', num_remito:'',
+    fecha_remito:'', fojas_cedula:'', modal_notif:'', email_acuse:'', fecha_notif:'',
+    fojas_constancia:'', tipo_descargo:'no_presento', fojas_descargo:'',
+    expte_descargo:'', repres_legal:'', repres_dni:''
+  });
+  saveState();
+  renderEndilgados();
+}
+
+function eliminarEndilgado(idx){
+  if(!confirm('¿Eliminar el remitente "'+(state.endilgados[idx].razon_social||'sin nombre')+'"?')) return;
+  state.endilgados.splice(idx,1);
+  saveState();
+  renderEndilgados();
+}
+
+function moverEndilgado(idx,dir){
+  const newIdx = idx+dir;
+  if(newIdx<0 || newIdx>=state.endilgados.length) return;
+  const tmp = state.endilgados[idx];
+  state.endilgados[idx] = state.endilgados[newIdx];
+  state.endilgados[newIdx] = tmp;
+  saveState();
+  renderEndilgados();
+}
+
+function abrirPegadoMasivo(){
+  const p = document.getElementById('pegado-masivo-panel');
+  p.style.display = p.style.display==='none' ? 'block' : 'none';
+}
+
+function procesarPegadoMasivo(){
+  const txt = document.getElementById('pegado-textarea').value.trim();
+  if(!txt) return;
+  const lineas = txt.split(/\n/);
+  let agregados = 0;
+  lineas.forEach(linea=>{
+    const cols = linea.split('\t');
+    if(cols.length<2) return;
+    state.endilgados.push({
+      razon_social: cols[0]||'',
+      cuit: cols[1]||'',
+      domicilio: cols[2]||'',
+      tipo_remito: cols[3]||'R',
+      num_remito: cols[4]||'',
+      fecha_remito: cols[5]||'',
+      fojas_cedula:'', modal_notif:'', email_acuse:'', fecha_notif:'',
+      fojas_constancia:'', tipo_descargo:'no_presento', fojas_descargo:'',
+      expte_descargo:'', repres_legal:'', repres_dni:''
+    });
+    agregados++;
+  });
+  document.getElementById('pegado-textarea').value = '';
+  document.getElementById('pegado-masivo-panel').style.display = 'none';
+  saveState();
+  renderEndilgados();
+  alert('Se agregaron '+agregados+' remitente(s).');
+}
+
+// =================================================================
+// MODELOS DE DESCARGO
+// =================================================================
+function renderModelos(){
+  const cont = document.getElementById('modelos-container');
+  cont.innerHTML = '';
+  state.modelos.forEach((m,idx)=>{
+    const div = document.createElement('details');
+    div.open = idx<2;
+    div.innerHTML = `
+      <summary>${m.nombre}</summary>
+      <div class="panel" style="margin-top:6px">
+        <p class="subtitle" style="margin-bottom:10px">${m.descripcion}</p>
+        <label>Texto para la Resolución (formato "Que, ... ;")</label>
+        <textarea rows="6" data-modelo-idx="${idx}" data-modelo-key="para_resolucion">${m.para_resolucion}</textarea>
+        <label style="margin-top:10px">Texto para el Dictamen (formato narrativo)</label>
+        <textarea rows="6" data-modelo-idx="${idx}" data-modelo-key="para_dictamen">${m.para_dictamen}</textarea>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+  cont.querySelectorAll('[data-modelo-idx]').forEach(t=>{
+    t.addEventListener('input',()=>{
+      const idx = parseInt(t.dataset.modeloIdx);
+      const key = t.dataset.modeloKey;
+      state.modelos[idx][key] = t.value;
+      saveState();
+    });
+  });
+}
+
+function resetModelos(){
+  if(!confirm('¿Restaurar los modelos de descargo a los valores originales? Se perderán tus modificaciones.')) return;
+  state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+  saveState();
+  renderModelos();
+  renderEndilgados();
+}
+
+// =================================================================
+// HELPERS DE GENERACION
+// =================================================================
+function ex(k,fallback){ return (state.expediente[k]||fallback||'_____').toString(); }
+
+function aplicarVars(texto, e){
+  return texto
+    .replace(/\{\{razon_social\}\}/g, e.razon_social||'_____')
+    .replace(/\{\{cuit\}\}/g, e.cuit||'_____')
+    .replace(/\{\{fojas_descargo\}\}/g, e.fojas_descargo||'_____');
+}
+
+function listarRemitos(){
+  // genera el párrafo "DOS (2) Remitos Tipo R individualizados como..."
+  const partes = state.endilgados.filter(e=>e.razon_social).map(e=>{
+    return `UN (1) Remito Tipo "${e.tipo_remito||'R'}" N° ${e.num_remito||'_____'}${e.fecha_remito?` de fecha ${e.fecha_remito}`:''} emitido por la firma ${e.razon_social}, CUIT N° ${e.cuit||'_____'}`;
+  });
+  return partes.join('; ');
+}
+
+function listarSinDescargo(){
+  const sin = state.endilgados.filter(e=>e.tipo_descargo==='no_presento' && e.razon_social);
+  if(sin.length===0) return '';
+  const lista = sin.map(e=>`${e.razon_social}, CUIT N° ${e.cuit||'_____'}`).join('; ');
+  return `Que, es dable señalar que ante la Mesa General de Entradas de esta Administración no se registra presentación de Descargo por parte de las firmas ${lista}, pese a estar debidamente notificadas;`;
+}
+
+function listarSinDescargoDictamen(){
+  const sin = state.endilgados.filter(e=>e.tipo_descargo==='no_presento' && e.razon_social);
+  if(sin.length===0) return '';
+  const lista = sin.map(e=>`${e.razon_social}, CUIT N° ${e.cuit||'_____'}`).join('; ');
+  return `Es dable señalar que ante la Mesa General de Entradas de esta Administración no se registra presentación de Descargo por parte de las firmas ${lista}, pese a estar debidamente notificadas.`;
+}
+
+function listarCedulasNotificacion(esResolucion){
+  // genera párrafos "Que, a fs. X obra Cédula de Notificación dirigida a la firma..."
+  const prefix = esResolucion ? 'Que, ' : '';
+  const sufijo = esResolucion ? ';' : '.';
+  return state.endilgados.filter(e=>e.razon_social && e.fojas_cedula).map(e=>{
+    const tratamiento = /^(SR\.?|SRA\.?|SEÑOR|SEÑORA)/i.test(e.razon_social) ? 'al señor' : 'a la firma';
+    let medio = '';
+    if(e.modal_notif==='Buzón Fiscal Electrónico'){
+      medio = `enviada mediante Buzón Fiscal Electrónico: ${e.email_acuse||'_____'}`;
+    }else if(e.modal_notif==='Correo postal'){
+      medio = `enviada mediante Correo postal (Acuse de Correo Argentino N° ${e.email_acuse||'_____'})`;
+    }else if(e.modal_notif==='Pendiente de notificación'){
+      return `${prefix}respecto de la firma ${e.razon_social}, CUIT N° ${e.cuit||'_____'}, se encuentra pendiente de notificación${sufijo}`;
+    }
+    const fechaTexto = e.fecha_notif ? `, habiéndose notificado en fecha ${e.fecha_notif}` : '';
+    const constancia = e.fojas_constancia ? `, conforme constancia de fs. ${e.fojas_constancia}` : '';
+    return `${prefix}a fs. ${e.fojas_cedula} obra Cédula de Notificación dirigida ${tratamiento} ${e.razon_social}, CUIT N° ${e.cuit||'_____'}, ${medio}${fechaTexto}${constancia}${sufijo}`;
+  }).join('\n\n');
+}
+
+function listarDescargos(esResolucion){
+  // párrafos describiendo cada descargo presentado
+  return state.endilgados.filter(e=>e.razon_social && e.tipo_descargo!=='no_presento' && e.fojas_descargo).map(e=>{
+    const modelo = state.modelos.find(m=>m.id===e.tipo_descargo);
+    if(!modelo) return '';
+    let descripcionDescargo = '';
+    if(e.expte_descargo){
+      const prefix = esResolucion ? 'Que, ' : '';
+      descripcionDescargo = `${prefix}a fs. ${e.fojas_descargo} obra escrito presentado ante la Mesa de Entradas y Salidas dependiente de este Organismo Fiscal, formando el Expediente ${e.expte_descargo}, donde ${e.repres_legal? e.repres_legal+', '+(e.repres_dni?'DNI N° '+e.repres_dni+', ':''):''}en representación de la firma ${e.razon_social}, CUIT N° ${e.cuit||'_____'}, presentó descargo en relación a la infracción endilgada${esResolucion?';':'.'}`;
+    }
+    return descripcionDescargo;
+  }).filter(s=>s).join('\n\n');
+}
+
+function listarRespuestasDescargo(esResolucion){
+  // texto de fundamentación a cada descargo según el modelo seleccionado
+  const tipos = new Set();
+  return state.endilgados.filter(e=>e.razon_social && e.tipo_descargo!=='no_presento' && e.fojas_descargo).map(e=>{
+    const modelo = state.modelos.find(m=>m.id===e.tipo_descargo);
+    if(!modelo) return '';
+    const txt = esResolucion ? modelo.para_resolucion : modelo.para_dictamen;
+    if(!txt) return '';
+    return aplicarVars(txt, e);
+  }).filter(s=>s).join('\n\n');
+}
+
+// =================================================================
+// GENERAR RESOLUCION
+// =================================================================
+function generarResolucion(){
+  const e = state.expediente;
+  const ut_multa_str = e.ut_multa ? '$ '+Number(e.ut_multa).toLocaleString('es-AR')+',00' : '$ _____';
+  const remitos = listarRemitos();
+  const cedulasNotif = listarCedulasNotificacion(true);
+  const descargosPresentados = listarDescargos(true);
+  const respuestasDescargo = listarRespuestasDescargo(true);
+  const sinDescargo = listarSinDescargo();
+
+  const txt = `FORMOSA,
+
+
+VISTO:
+
+El expediente ${ex('exp_numero')}, caratulado: "PUESTO DE CONTROL ${ex('acta_puesto').toUpperCase()} S/ ACTA DE COMPROBACION INFRACCION ART. 42° CODIGO FISCAL – ${ex('exp_caratula_principal').toUpperCase()}" del Registro de Mesa de Entradas y de Salidas de esta Administración Tributaria Provincial, y;
+
+CONSIDERANDO:
+
+Que, las actuaciones referidas en el Visto dan cuenta de un procedimiento de control y verificación llevado a cabo por los agentes de este Organismo Fiscal, en virtud del cual se verificaron conductas que configurarían prima facie las infracción prevista en el artículo 42º, inciso a) del Código Fiscal - Ley Nº 1.589, pasibles de la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.) y de la sanción de clausura de TRES A DIEZ (3 a 10) días del local, establecimiento o recinto comercial del infractor, a tenor de lo dispuesto por el artículo 42º del Código Fiscal - Ley Nº 1589 y sus modificatorias, y artículo 59º, inciso 12) de la Ley Impositiva Nº 1.590;
+
+Que, a fs. ${ex('acta_fojas')} rola Acta de Comprobación, labrada el día ${ex('acta_fecha')}, siendo las ${ex('acta_hora')}, oportunidad en la cual los agentes de esta Administración Tributaria Provincial, destacados a cumplir funciones en el Puesto de Control Caminero "${ex('acta_puesto')}", ubicado sobre ${ex('acta_ruta')} de la provincia de ${ex('acta_provincia')}, iniciaron un procedimiento de control y verificación del tipo de mercaderías, cantidad, precio, procedencia, destino de las mismas y la documentación respaldatoria de las operaciones gravadas por el Impuesto sobre los Ingresos Brutos, labrándose la correspondiente Acta de Comprobación, de conformidad con las previsiones del artículo 7º inciso 18) y el artículo 44º del Código Fiscal de la Provincia de Formosa - Ley N° 1.589 y sus modificatorias;
+
+Que, en ese marco, se verificó el ingreso de una unidad de transporte, propiedad de la firma ${ex('trans_empresa')}, CUIT N° ${ex('trans_cuit')}, con domicilio sito en ${ex('trans_domicilio')}, identificada como Camión Marca: ${ex('trans_camion')}, Dominio: ${ex('trans_dominio')}${e.trans_dominio_aco?', C/Semirremolque Dominio: '+e.trans_dominio_aco:''}, al mando del señor ${ex('trans_chofer')}, DNI N° ${ex('trans_chofer_dni')}, quién manifestó que transportaba: ${ex('exp_mercaderia')}. Preguntado respecto del lugar donde se efectuó la carga de los bienes y el lugar de destino, respondió que la carga se realizó en la ${ex('trans_origen')}, teniendo como destino la ${ex('trans_destino')};
+
+Que, conforme lo verificado, el ingreso de los bienes a la jurisdicción provincial respondería a operaciones de compraventa, circunstancia por la cual se solicitó al responsable del traslado de los productos y mercaderías que exhiba las facturas o tiques facturas de las operaciones correspondientes, conforme lo normado por el artículo 1° de la Resolución General N° 26/2020-DGR, exhibiendo como documentos de respaldo ${remitos};
+
+Que, en consecuencia, se verificaron sendos incumplimientos de los recaudos que establece el artículo 1° de la Resolución General N° 026/2020-DGR, al no entregar la Factura o Tique Factura, emitida conforme lo establece la Resolución General N° 1415/2003-AFIP, a la cual este Organismo Fiscal se encuentra adherido mediante Resolución General N° 032/2019-DGR configurándose así prima facie la infracción prevista en el artículo 42°, inciso a) del Código Fiscal – Ley N° 1.589 consistente en "no entregar o no emitir facturas o comprobantes equivalentes, por una o más operaciones comerciales, industriales, agropecuarias, o de prestación de servicios que realicen en las formas, requisitos y condiciones que establece la Administración", resultando responsables los sujetos individualizados en el anexo del Acta de Comprobación. Todas las conductas endilgadas resultan pasibles de la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.), equivalente a la suma de PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}), siendo el valor de la unidad tributaria de PESOS ${(e.ut_valor_letras||'_____').toUpperCase()} ($ ${e.ut_valor||'___'},00) al momento de cometida la infracción, y la sanción de Clausura de TRES (3) a DIEZ (10) días del recinto, local o establecimiento comercial de que se trate;
+
+Que, a efectos de precautelar el derecho de defensa se notificó al responsable del traslado de las mercaderías, que debía presentar el descargo pertinente, dentro de los diez (10) días de labradas las Actas de Comprobación, debiendo acompañar todas las pruebas de la que intente valerse;
+
+${e.prov_fojas?`Que, a fs. ${e.prov_fojas} obra providencia de fecha ${e.prov_fecha||'_____'} donde se dispuso notificar las infracciones verificadas con copia del Acta de Comprobación, atento a que no consta en autos su debida notificación, en un todo de acuerdo a lo previsto por el artículo 44° del Código Fiscal – Ley N° 1.589;\n\n`:''}${cedulasNotif}
+
+${descargosPresentados}
+
+${respuestasDescargo}
+
+${sinDescargo}
+
+Que, por otro lado, cabe considerar que los escritos de defensa han sido presentados en legal tiempo y forma, por lo cual resultan admisibles desde el punto de vista formal;
+
+Que, conforme los elementos obrantes en las presentes actuaciones, resulta necesario realizar un análisis de los hechos verificados a fin de determinar las responsabilidades por las infracciones endilgadas;
+
+Que, el hecho que funda las infracciones que dieron origen al Acta de Comprobación fue puntualmente la verificación del transporte de "${ex('exp_mercaderia')}", que se corresponde a operaciones de compraventa, sin exhibir la factura o tique que respalde dicha operación;
+
+Que, la Resolución General N° 01/2006-DGR, reglamentó un RÉGIMEN DE INFORMACIÓN GENERAL EN LOS PUESTOS DE CONTROL CAMINERO habilitados, la cual en su artículo 1° establece que los contribuyentes o responsables del traslado de los productos debe presentar la documentación que respalda el traslado de los bienes, la cual será intervenida por el funcionario que se desempeñe en el Puesto de Control. A su vez, el artículo 17º de la mentada reglamentación expresamente dispone: "Los responsables del transporte, deberán presentar en los Puestos de Control, las siguientes documentaciones: Facturas, Remitos, Carta de Porte, u otros que fuera emitido según el régimen de facturación aprobada…" En el caso de mercaderías transportadas hacia esta Jurisdicción y/o servicio de encomienda, deberán agregar todos los remitos de las mercaderías transportadas hacia esta Jurisdicción, a la Hoja de Ruta, dejando copia de dichas documentaciones en los Puestos de Control Caminero. En caso de verificarse en los Puestos de Control diferencias entre los manifiestos y remitos adjuntos, se presumirá la responsabilidad de la Empresa transportista. En lo que respecta a las documentaciones que deben respaldar el traslado de los productos y mercaderías resulta de aplicación la Resolución General N° 32/2019-DGR, que adhirió a los términos, de la Resolución General 1415/2003 de la AFIP, y la Resolución General N° 26/2020-DGR, que dispone que todo ingreso de mercaderías a la provincia de Formosa, que responda a una operación de compraventa, permuta o dación en pago, deberá estar documentado con la factura de venta correspondiente;
+
+Que, en este sentido, el artículo 1º de la Resolución General N° 026/2020-DGR dice: "DISPÓNGASE, que todo ingreso a la Provincia de Formosa, de productos o mercaderías de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá estar documentado con la factura o tique factura, además del remito o guía según corresponda, todos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 y sus modificatorias de AFIP, adherida por este Organismo, por la Resolución General N° 32/2019-DGR";
+
+Que, por su parte, el artículo 5º de la mencionada Resolución establece: "DISPÓNGASE, que los responsables del ingreso a la jurisdicción provincial, de los productos y mercaderías deberán exhibir la documental exigida por la presente reglamentación ante los PUESTOS DE CONTROL CAMINEROS habilitados por este Organismo Fiscal a fin de verificar el correcto cumplimiento de las normas vigentes y la debida correspondencia entre los datos consignados y los productos que se trasladan. Los encargados de transportar a cualquier título los productos y mercaderías, deberán exigir al remitente la entrega de la documentación de respaldo y controlar que la misma se encuentre debidamente confeccionada";
+
+Que el artículo 6° dispuso, que en caso de verificarse el traslado de mercaderías y productos sin el respaldo documental exigido por la presente, dicha conducta configurará infracción en los términos del artículo 42º del Código Fiscal, pasible de la sanción de multa y clausura del local, establecimiento o recinto comercial;
+
+Que así, a través de la Resolución General N° 26/2020-DGR, haciendo uso de su facultad de reglamentación, la Administración fija una de las oportunidades en la que, en uso de otra de sus facultades, exigirá la exhibición de la factura o tique factura que cumpla con los recaudos establecidos. Tal exigencia recae, en principio y en esa oportunidad, en el remitente de los productos y en el sujeto responsable del transporte de los mismos. Ello es así, ya que al disponerse que debe estar documentado con la factura o tique factura todo ingreso a la Provincia de Formosa de productos o mercaderías, por operaciones de compraventa, permuta o dación en pago, requiere en primer lugar la emisión y entrega de la mencionada documentación por parte del remitente al responsable del transporte, deber formal que recae, en el caso particular, en cabeza de los remitentes de los bienes;
+
+Que, el análisis se efectúa bajo el entendimiento de que la remisión de bienes hacia esta jurisdicción responde a un principio de ejecución del contrato de compraventa de cosas muebles, previamente concertado (de conformidad de los artículos 971° y siguientes y artículo 1015° del Código Civil y Comercial de la Nación y demás ccdtes. legales), a partir del cual nace la principal obligación del vendedor de entregar la cosa (artículo 1137°, 1147° y 1148° del citado Código) como así también la obligación de entregar al comprador la factura y demás documentos relacionados con la cosa vendida (artículo 1145° y 1146° del mismo Código Nacional);
+
+Que, en consecuencia, ninguno de los descargos analizados logra desvirtuar los hechos constatados en las Actas de Comprobación, manteniéndose incólume la infracción prevista en el artículo 42° del Código Fiscal;
+
+Que, por todo lo expuesto precedentemente, y haciendo un análisis de los hechos y los elementos que obran en autos, cabe concluir que las firmas comerciales mencionadas en el anexo de la presente Resolución, no dieron cumplimiento de los recaudos que establece el artículo 1º de la Resolución General Nº 026/2020-DGR al no exhibir la Factura o Tique Factura, resultando responsable de la infracción prevista en el artículo 42º inciso a) del Código Fiscal- Ley Nº 1589, por no entregar o no emitir facturas o comprobantes equivalentes por una o más operaciones comerciales, industriales, agropecuarias o de prestación de servicios que realice en las formas, requisitos y condiciones que establezca la Dirección", en consecuencia, deviene procedente aplicar a cada uno de los sujetos mencionados en el anexo del presente instrumento, la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.), equivalentes a la suma de PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}), siendo el valor de la unidad tributaria de PESOS ${(e.ut_valor_letras||'_____').toUpperCase()} ($ ${e.ut_valor||'___'},00) al momento de cometida la infracción y la sanción de clausura TRES A DIEZ (3 a 10) días del establecimiento, local, oficina, del recinto comercial del infractor;
+
+Que, teniendo en cuenta que los infractores no poseen establecimiento o recinto comercial en esta Jurisdicción, la sanción de clausura resulta inviable;
+
+Que, obra Dictamen Jurídico del Departamento Procedimiento por Infracciones Formales, que exige el inciso 4) del artículo 30º del Decreto Ley Nº 971/80;
+
+Que en virtud a ello y conforme a las facultades conferidas por la Ley N° 1.733, nada obsta al dictado del acto administrativo pertinente;
+
+Por ello:
+
+EL ADMINISTRADOR GENERAL DE LA ADMINISTRACIÓN TRIBUTARIA DE LA PROVINCIA DE FORMOSA
+
+R E S U E L V E:
+
+ARTÍCULO 1°: DECLÁRASE a cada uno de los sujetos mencionados en el anexo de la presente resolución, incursas en la infracción prevista en el artículo 42°, inciso a) del Código Fiscal - Ley N° 1.589 y sus modificatorias, por no exhibir la factura o documento equivalente que respalde la operación de compraventa en las formas y condiciones exigidas por la Resolución General Nº 26/2020-DGR, en un todo de acuerdo con los fundamentos expuestos en los considerandos del presente instrumento.
+
+ARTÍCULO 2º: APLÍCASE a cada uno de los sujetos mencionados en el anexo de la presente resolución, la sanción de multa establecida en ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.) equivalente a PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}), para cada uno de ellos, a tenor de lo dispuesto por el artículo 59°, inciso 12) de la Ley Impositiva N° 1.590, siendo el valor de la Unidad Tributaria de PESOS ${(e.ut_valor_letras||'_____').toUpperCase()} ($ ${e.ut_valor||'___'},00) a tenor de lo dispuesto por el artículo 59°, inciso 12) de la Ley Impositiva N° 1.590, al momento de cometida la infracción por resultar responsable de la infracción prevista en el artículo 42º, incisos a) del Código Fiscal - Ley Nº 1.589 y sus modificatorias.
+
+ARTÍCULO 3º: INTÍMASE a cada uno de los sujetos mencionados en el anexo de la presente resolución, a que en el plazo de diez (10) días contados a partir de la notificación de la presente ingresen la suma de PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}) en concepto de sanción de multa por el artículo 42º, incisos a) del Código Fiscal - Ley N° 1.589 y sus modificatorias.
+
+ARTÍCULO 4º: LA falta de pago de las multas impuestas e intimadas por la presente, dará lugar al libramiento de la Boleta de Deuda, de conformidad a lo normado en el artículo 93° y sgtes. del Código Fiscal, Ley 1.589, sin perjuicio de las medidas expuestas en el artículo 92º del mismo cuerpo legal.
+
+ARTÍCULO 5º: CUMPLIMENTADO que fuera el pago deberá informar este Organismo dentro de las cuarenta y ocho (48 hs.) horas conforme lo establece el artículo 23º punto 4, del Código Fiscal de la Provincia de Formosa.
+
+ARTÍCULO 6º: HÁGASE SABER que las sanciones de multas dispuestas en la presente resolución, podrán ser recurridas mediante Recurso de Apelación, conforme lo previsto por el artículo 49° del Código Fiscal – Ley Nº 1.589, modificado por Ley N° 1.733, dentro de los CINCO (05) días de su notificación, previo pago del diez por mil (10‰) sobre el monto de la determinación y/o multa, en concepto de Tasa Retributiva de Servicios, conforme lo previsto en el artículo 13º de la Ley Impositiva Nº 1.590, bajo apercibimiento de tener por desistida la presentación (artículo 195º del Código Fiscal - Ley Nº 1.589). En tal caso, en igual plazo, deberá constituir domicilio en la ciudad de Formosa, capital de la Provincia homónima, dentro del radio urbano del Ministerio de Economía, Hacienda y Finanzas de la Provincia de Formosa, de conformidad a lo normado en el artículo 89º del Código Fiscal- Ley Nº 1.589 bajo apercibimiento de tenerlo por constituido en dicho organismo, en donde serán válidas todas las notificaciones. En el mismo acto deberá constituir domicilio electrónico, con correo electrónico habilitado, dicho domicilio producirá en el ámbito administrativo los efectos del domicilio fiscal constituido, siendo válidas y plenamente eficaces todas las notificaciones, emplazamientos y comunicaciones que allí se practiquen por esta vía (conf. Artículo 18 del Código Fiscal – Ley Nº 1.589, Modificado por Ley Nº 1.618).
+
+ARTÍCULO 7º: REGÍSTRESE, notifíquese a quienes correspondan. Cumplido, ARCHÍVESE.
+
+
+RESOLUCIÓN INTERNA N° ${ex('res_numero','_______/')}
+
+
+D.J.T.
+P.I.F.
+F.M.P.`;
+
+  document.getElementById('out-resolucion').textContent = txt;
+  // navegar
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="salida-resolucion"]').classList.add('active');
+  document.getElementById('tab-salida-resolucion').classList.add('active');
+}
+
+// =================================================================
+// GENERAR ANEXO
+// =================================================================
+function generarAnexo(){
+  const e = state.expediente;
+  const ut_multa_str = e.ut_multa ? '$ '+Number(e.ut_multa).toLocaleString('es-AR')+',00' : '$ _____';
+  let txt = `ANEXO RESOLUCIÓN INTERNA N° ${ex('res_numero','_______/')}
+EXPEDIENTE: ${ex('exp_numero')}
+CARÁTULA: PUESTO DE CONTROL "${ex('acta_puesto')}" S/ ACTA DE COMPROBACIÓN INFRACCIÓN ART. 42° CÓDIGO FISCAL – ${ex('exp_caratula_principal').toUpperCase()}
+
+`;
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a2624;color:#fff"><th style="padding:6px;border:1px solid #999">N°</th><th style="padding:6px;border:1px solid #999">RAZÓN SOCIAL</th><th style="padding:6px;border:1px solid #999">CUIT</th><th style="padding:6px;border:1px solid #999">DOMICILIO FISCAL</th><th style="padding:6px;border:1px solid #999">REMITO</th><th style="padding:6px;border:1px solid #999">MULTA</th><th style="padding:6px;border:1px solid #999">MODAL. NOTIF.</th><th style="padding:6px;border:1px solid #999">FECHA NOTIF.</th></tr></thead><tbody>';
+  state.endilgados.forEach((en,i)=>{
+    txt += `${i+1}. ${en.razon_social||'_____'} | CUIT: ${en.cuit||'_____'} | Dom.: ${en.domicilio||'_____'} | Remito ${en.tipo_remito||'R'} N° ${en.num_remito||'_____'} | Multa: ${ut_multa_str} | Notif.: ${en.modal_notif||'_____'} ${en.fecha_notif?'('+en.fecha_notif+')':''}\n\n`;
+    html += `<tr><td style="padding:5px;border:1px solid #ccc">${i+1}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr(en.razon_social||'')}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr(en.cuit||'')}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr(en.domicilio||'')}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr((en.tipo_remito||'R')+' N° '+(en.num_remito||''))}</td><td style="padding:5px;border:1px solid #ccc">${ut_multa_str}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr(en.modal_notif||'')}</td><td style="padding:5px;border:1px solid #ccc">${escapeAttr(en.fecha_notif||'')}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('out-anexo').textContent = txt;
+  document.getElementById('out-anexo-tabla').innerHTML = html;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="salida-anexo"]').classList.add('active');
+  document.getElementById('tab-salida-anexo').classList.add('active');
+}
+
+function copiarTablaAnexo(){
+  const tabla = document.getElementById('out-anexo-tabla');
+  const range = document.createRange();
+  range.selectNode(tabla);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  try{
+    document.execCommand('copy');
+    alert('Tabla copiada. Pegala en Word con Ctrl+V (mantiene formato de tabla).');
+  }catch(e){
+    alert('No se pudo copiar automáticamente. Seleccioná la tabla manualmente.');
+  }
+  window.getSelection().removeAllRanges();
+}
+
+// =================================================================
+// GENERAR DICTAMEN
+// =================================================================
+function generarDictamen(){
+  const e = state.expediente;
+  const ut_multa_str = e.ut_multa ? '$ '+Number(e.ut_multa).toLocaleString('es-AR')+',00' : '$ _____';
+  const remitos = listarRemitos();
+  const cedulasNotif = listarCedulasNotificacion(false);
+  const descargosPresentados = listarDescargos(false);
+  const respuestasDescargo = listarRespuestasDescargo(false);
+  const sinDescargo = listarSinDescargoDictamen();
+
+  const txt = `DICTAMEN N°: ${ex('dict_numero')}.
+
+Expediente ${ex('exp_numero')}, caratulado: "PUESTO DE CONTROL ${ex('acta_puesto').toUpperCase()} S/ ACTA DE COMPROBACION INFRACCION ART. 42° CODIGO FISCAL – ${ex('exp_caratula_principal').toUpperCase()}."
+
+
+SR.
+- DIRECTOR DE JURÍDICA Y TÉCNICA
+DR. ${ex('dict_director')}
+- SU DESPACHO:
+
+Viene a este Departamento el expediente supra referenciado, en virtud del cual dan cuenta de un procedimiento de control y verificación llevado a cabo por los agentes de este Organismo Fiscal, en virtud del cual se verificaron conductas que configurarían prima facie las infracción prevista en el artículo 42º, inciso a) del Código Fiscal - Ley Nº 1.589, pasibles de la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.) y de la sanción de clausura de TRES A DIEZ (3 a 10) días del local, establecimiento o recinto comercial del infractor, a tenor de lo dispuesto por el artículo 42º del Código Fiscal - Ley Nº 1589 y sus modificatorias, y artículo 59º, inciso 12) de la Ley Impositiva Nº 1.590.
+
+A fs. ${ex('acta_fojas')} rola Acta de Comprobación, labrada el día ${ex('acta_fecha')}, siendo las ${ex('acta_hora')}, oportunidad en la cual los agentes de esta Administración Tributaria Provincial, destacados a cumplir funciones en el Puesto de Control Caminero "${ex('acta_puesto')}", ubicado sobre ${ex('acta_ruta')} de la provincia de ${ex('acta_provincia')}, iniciaron un procedimiento de control y verificación del tipo de mercaderías, cantidad, precio, procedencia, destino de las mismas y la documentación respaldatoria de las operaciones gravadas por el Impuesto sobre los Ingresos Brutos, labrándose la correspondiente Acta de Comprobación, de conformidad con las previsiones del artículo 7º inciso 18) y el artículo 44º del Código Fiscal de la Provincia de Formosa- Ley N° 1.589 y sus modificatorias.
+
+En ese marco, se verificó el ingreso de una unidad de transporte, propiedad de la firma ${ex('trans_empresa')}, CUIT N° ${ex('trans_cuit')}, con domicilio sito en ${ex('trans_domicilio')}, identificada como Camión Marca: ${ex('trans_camion')}, Dominio: ${ex('trans_dominio')}${e.trans_dominio_aco?', C/Semirremolque Dominio: '+e.trans_dominio_aco:''}, al mando del señor ${ex('trans_chofer')}, DNI N° ${ex('trans_chofer_dni')}, quién manifestó que transportaba: ${ex('exp_mercaderia')}. Preguntado respecto del lugar donde se efectuó la carga de los bienes y el lugar de destino, respondió que la carga se realizó en la ${ex('trans_origen')}, teniendo como destino la ${ex('trans_destino')}.
+
+Conforme lo verificado, el ingreso de los bienes a la jurisdicción provincial respondería a operaciones de compraventa, circunstancia por la cual se solicitó al responsable del traslado de los productos y mercaderías que exhiba las facturas o tiques facturas de las operaciones correspondientes, conforme lo normado por el artículo 1° de la Resolución General N° 26/2020-DGR, exhibiendo como documentos de respaldo ${remitos}.
+
+En consecuencia, se verificaron sendos incumplimientos de los recaudos que establece el artículo 1° de la Resolución General N° 026/2020-DGR, al no entregar la Factura o Tique Factura, emitida conforme lo establece la Resolución General N° 1415/2003-AFIP, a la cual este Organismo Fiscal se encuentra adherido mediante Resolución General N° 032/2019-DGR configurándose así prima facie la infracción prevista en el artículo 42°, inciso a) del Código Fiscal – Ley N° 1.589 consistente en "no entregar o no emitir facturas o comprobantes equivalentes, por una o más operaciones comerciales, industriales, agropecuarias, o de prestación de servicios que realicen en las formas, requisitos y condiciones que establece la Administración", resultando responsables los sujetos individualizados en el anexo del Acta de Comprobación. Todas las conductas endilgadas resultan pasibles de la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.), equivalente a la suma de PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}), siendo el valor de la unidad tributaria de PESOS ${(e.ut_valor_letras||'_____').toUpperCase()} ($ ${e.ut_valor||'___'},00) al momento de cometida la infracción, y la sanción de Clausura de TRES (3) a DIEZ (10) días del recinto, local o establecimiento comercial de que se trate.
+
+A efectos de precautelar el derecho de defensa se notificó al responsable del traslado de las mercaderías, que debía presentar el descargo pertinente, dentro de los diez (10) días de labradas las Actas de Comprobación, debiendo acompañar todas las pruebas de la que intente valerse.
+
+${e.prov_fojas?`A fs. ${e.prov_fojas} obra providencia de fecha ${e.prov_fecha||'_____'} donde se dispuso notificar las infracciones verificadas con copia del Acta de Comprobación, atento a que no consta en autos su debida notificación, en un todo de acuerdo a lo previsto por el artículo 44° del Código Fiscal – Ley N° 1.589.\n\n`:''}${cedulasNotif}
+
+${descargosPresentados}
+
+${sinDescargo}
+
+Por otro lado, cabe considerar que los escritos de defensa han sido presentados en legal tiempo y forma, por lo cual resultan admisibles desde el punto de vista formal.
+
+Conforme los elementos obrantes en las presentes actuaciones, resulta necesario realizar un análisis de los hechos verificados a fin de determinar las responsabilidades por las infracciones endilgadas.
+
+El hecho que funda las infracciones que dieron origen al Acta de Comprobación fue puntualmente la verificación del transporte de "${ex('exp_mercaderia')}", que se corresponde a operaciones de compraventa, sin exhibir la factura o tique que respalde dicha operación.
+
+La Resolución General N° 01/2006-DGR, reglamentó un RÉGIMEN DE INFORMACIÓN GENERAL EN LOS PUESTOS DE CONTROL CAMINERO habilitados, la cual en su artículo 1° establece que los contribuyentes o responsables del traslado de los productos debe presentar la documentación que respalda el traslado de los bienes, la cual será intervenida por el funcionario que se desempeñe en el Puesto de Control. A su vez, el artículo 17º de la mentada reglamentación expresamente dispone: "Los responsables del transporte, deberán presentar en los Puestos de Control, las siguientes documentaciones: Facturas, Remitos, Carta de Porte, u otros que fuera emitido según el régimen de facturación aprobada…" En el caso de mercaderías transportadas hacia esta Jurisdicción y/o servicio de encomienda, deberán agregar todos los remitos de las mercaderías transportadas hacia esta Jurisdicción, a la Hoja de Ruta, dejando copia de dichas documentaciones en los Puestos de Control Caminero. En caso de verificarse en los Puestos de Control diferencias entre los manifiestos y remitos adjuntos, se presumirá la responsabilidad de la Empresa transportista. En lo que respecta a las documentaciones que deben respaldar el traslado de los productos y mercaderías resulta de aplicación la Resolución General N° 32/2019-DGR, que adhirió a los términos, de la Resolución General 1415/2003 de la AFIP, y la Resolución General N° 26/2020-DGR, que dispone que todo ingreso de mercaderías a la provincia de Formosa, que responda a una operación de compraventa, permuta o dación en pago, deberá estar documentado con la factura de venta correspondiente.
+
+En este sentido, el artículo 1º de la Resolución General N° 026/2020-DGR dice: "DISPÓNGASE, que todo ingreso a la Provincia de Formosa, de productos o mercaderías de cualquier clase y especie, que responda a operaciones efectuadas a título de compraventa, permuta o dación en pago, deberá estar documentado con la factura o tique factura, además del remito o guía según corresponda, todos emitidos en la forma y con los recaudos establecidos en la Resolución General N° 1.415/2003 y sus modificatorias de AFIP, adherida por este Organismo, por la Resolución General N° 32/2019-DGR".
+
+Por su parte, el artículo 5º de la mencionada Resolución establece: "DISPÓNGASE, que los responsables del ingreso a la jurisdicción provincial, de los productos y mercaderías deberán exhibir la documental exigida por la presente reglamentación ante los PUESTOS DE CONTROL CAMINEROS habilitados por este Organismo Fiscal a fin de verificar el correcto cumplimiento de las normas vigentes y la debida correspondencia entre los datos consignados y los productos que se trasladan. Los encargados de transportar a cualquier título los productos y mercaderías, deberán exigir al remitente la entrega de la documentación de respaldo y controlar que la misma se encuentre debidamente confeccionada".
+
+El artículo 6° dispuso, que en caso de verificarse el traslado de mercaderías y productos sin el respaldo documental exigido por la presente, dicha conducta configurará infracción en los términos del artículo 42º del Código Fiscal, pasible de la sanción de multa y clausura del local, establecimiento o recinto comercial.
+
+Así, a través de la Resolución General N° 26/2020-DGR, haciendo uso de su facultad de reglamentación, la Administración fija una de las oportunidades en la que, en uso de otra de sus facultades, exigirá la exhibición de la factura o tique factura que cumpla con los recaudos establecidos. Tal exigencia recae, en principio y en esa oportunidad, en el remitente de los productos y en el sujeto responsable del transporte de los mismos. Ello es así, ya que al disponerse que debe estar documentado con la factura o tique factura todo ingreso a la Provincia de Formosa de productos o mercaderías, por operaciones de compraventa, permuta o dación en pago, requiere en primer lugar la emisión y entrega de la mencionada documentación por parte del remitente al responsable del transporte, deber formal que recae, en el caso particular, en cabeza de los remitentes de los bienes.
+
+El análisis se efectúa bajo el entendimiento de que la remisión de bienes hacia esta jurisdicción responde a un principio de ejecución del contrato de compraventa de cosas muebles, previamente concertado (de conformidad de los artículos 971° y siguientes y artículo 1015° del Código Civil y Comercial de la Nación y demás ccdtes. legales), a partir del cual nace la principal obligación del vendedor de entregar la cosa (artículo 1137°, 1147° y 1148° del citado Código) como así también la obligación de entregar al comprador la factura y demás documentos relacionados con la cosa vendida (artículo 1145° y 1146° del mismo Código Nacional).
+
+${respuestasDescargo}
+
+En consecuencia, ninguno de los descargos analizados logra desvirtuar los hechos constatados en las Actas de Comprobación, manteniéndose incólume la infracción prevista en el artículo 42° del Código Fiscal.
+
+Por todo lo expuesto precedentemente, y haciendo un análisis de los hechos y los elementos que obran en autos, cabe concluir que las firmas comerciales mencionadas en el anexo de la presente Resolución, no dieron cumplimiento de los recaudos que establece el artículo 1º de la Resolución General Nº 026/2020-DGR al no exhibir la Factura o Tique Factura, resultando responsable de la infracción prevista en el artículo 42º inciso a) del Código Fiscal- Ley Nº 1589, por no entregar o no emitir facturas o comprobantes equivalentes por una o más operaciones comerciales, industriales, agropecuarias o de prestación de servicios que realice en las formas, requisitos y condiciones que establezca la Dirección", en consecuencia, este Departamento sugiere aplicar a cada uno de los sujetos mencionados en el anexo del presente instrumento, la sanción de multa de ${e.ut_cantidad||'_____'} UNIDADES TRIBUTARIAS (${e.ut_cantidad||'___'} U.T.), equivalentes a la suma de PESOS ${(e.ut_multa_letras||'_____').toUpperCase()} (${ut_multa_str}), siendo el valor de la unidad tributaria de PESOS ${(e.ut_valor_letras||'_____').toUpperCase()} ($ ${e.ut_valor||'___'},00) al momento de cometida la infracción y la sanción de clausura TRES A DIEZ (3 a 10) días del establecimiento, local, oficina, del recinto comercial del infractor.
+
+Teniendo en cuenta que los infractores no poseen establecimiento o recinto comercial en esta Jurisdicción, la sanción de clausura resulta inviable.
+
+Es el Dictamen del Departamento Procedimiento por Infracciones Formales.
+
+FORMOSA, ${ex('dict_fecha')}.
+
+
+D.J.T.
+P.I.F.
+F.M.P.`;
+
+  document.getElementById('out-dictamen').textContent = txt;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="salida-dictamen"]').classList.add('active');
+  document.getElementById('tab-salida-dictamen').classList.add('active');
+}
+
+// =================================================================
+// GENERAR CEDULAS
+// =================================================================
+function generarCedulas(){
+  const e = state.expediente;
+  const cont = document.getElementById('cedulas-individuales');
+  cont.innerHTML = '';
+  const todasArr = [];
+  state.endilgados.forEach((en,idx)=>{
+    if(!en.razon_social) return;
+    const tratamiento = /^(SR\.?|SRA\.?|SEÑOR|SEÑORA)/i.test(en.razon_social) ? '' : '';
+    const txt = `C É D U L A
+
+
+${en.razon_social}
+CUIT: ${en.cuit||'_____'}
+DOMICILIO FISCAL: ${en.domicilio||'_____'}
+
+
+                          Hago saber a UD., que en las actuaciones caratuladas: ${ex('exp_numero')}-EXP - PUESTO DE CONTROL "${ex('acta_puesto')}" S/ ACTA DE COMPROBACION INFRACCION AL ART. 42° INC. A) CODIGO FISCAL LEY N° 1589 - ${ex('exp_caratula_principal').toUpperCase()}, que se tramita ante la ADMINISTRACION TRIBUTARIA DE LA PROVINCIA DE FORMOSA sito en calle AYACUCHO Nº 810, de esta ciudad, se ha dispuesto notificarle la RESOLUCIÓN INTERNA N° ${ex('res_numero','_______')}, con fecha ${ex('res_fecha','_____')}, emitida por el Administrador General. Se adjunta un ejemplar original del mencionado acto a los efectos que correspondan.
+
+                          QUEDA UD., DEBIDAMENTE NOTIFICADO
+
+                                    formosa,
+
+
+D.J.T.
+P.I.F.
+F.M.P.`;
+    todasArr.push(txt);
+    const div = document.createElement('div');
+    div.className = 'output-area';
+    div.style.marginTop = '14px';
+    div.innerHTML = `
+      <div class="output-header">
+        <h4>Cédula ${idx+1}: ${escapeAttr(en.razon_social)}</h4>
+        <button class="copy-btn" onclick="copiarCedulaIndividual(${idx},this)">📋 Copiar esta cédula</button>
+      </div>
+      <div class="output-content" id="ced-ind-${idx}">${escapeAttr(txt).replace(/\n/g,'<br>')}</div>
+    `;
+    cont.appendChild(div);
+  });
+  document.getElementById('out-cedulas').textContent = todasArr.join('\n\n────────────────────────────────────\n\n');
+  // navegar
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="salida-cedulas"]').classList.add('active');
+  document.getElementById('tab-salida-cedulas').classList.add('active');
+}
+
+function copiarCedulaIndividual(idx,btn){
+  const el = document.getElementById('ced-ind-'+idx);
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='✓ Copiada';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='📋 Copiar esta cédula';btn.classList.remove('copied');},2000);
+  });
+}
+
+// =================================================================
+// COPIAR / EXPORTAR
+// =================================================================
+function copiarTexto(elementId, btnId){
+  const el = document.getElementById(elementId);
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById(btnId);
+    if(btn){
+      const original = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(()=>{btn.textContent = original; btn.classList.remove('copied');},2000);
+    }
+  }).catch(err=>{
+    alert('Error al copiar. Seleccioná manualmente y usá Ctrl+C.');
+  });
+}
+
+function exportarBackup(){
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup_atp_'+(state.expediente.exp_numero||'expediente').replace(/[/\\?]/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarBackup(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const imported = JSON.parse(e.target.result);
+      if(!confirm('¿Reemplazar los datos actuales con los del archivo "'+file.name+'"?')) return;
+      state = imported;
+      if(!state.modelos) state.modelos = JSON.parse(JSON.stringify(MODELOS_DEFAULT));
+      saveState();
+      initFields();
+      renderEndilgados();
+      renderModelos();
+      alert('Datos importados correctamente.');
+    }catch(err){
+      alert('Error al leer el archivo: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+function nuevoExpediente(){
+  if(!confirm('¿Empezar un expediente nuevo? Se perderán los datos actuales (recordá hacer backup antes si los necesitás).')) return;
+  state = {
+    expediente: {},
+    endilgados: [],
+    modelos: state.modelos // mantener los modelos editados
+  };
+  saveState();
+  // limpiar todos los inputs
+  document.querySelectorAll('[data-field]').forEach(input=>{
+    if(input.type==='number'){
+      if(input.dataset.field==='ut_cantidad') input.value='500';
+      else input.value='';
+    }else if(input.dataset.field==='exp_mercaderia'){
+      input.value='PAQUETERÍA';
+    }else if(input.dataset.field==='acta_puesto'){
+      input.value='Lucio V. Mansilla';
+    }else if(input.dataset.field==='acta_ruta'){
+      input.value='Ruta Nacional Nº 11, km. 1.103';
+    }else if(input.dataset.field==='acta_provincia'){
+      input.value='Formosa';
+    }else if(input.dataset.field==='dict_director'){
+      input.value='JOSE JAVIER MOBILIO';
+    }else{
+      input.value='';
+    }
+    state.expediente[input.dataset.field] = input.value;
+  });
+  saveState();
+  renderEndilgados();
+  recalcMulta();
+}
+
+// =================================================================
+// INIT
+// =================================================================
+loadState();
+initFields();
+renderEndilgados();
+renderModelos();
+</script>
+</body>
+</html>
